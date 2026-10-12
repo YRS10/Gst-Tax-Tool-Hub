@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TDS Challan Consolidator | TDS Studio</title>
+<style>
+  :root { --bg:#eef1f6; --card:#fff; --text:#111827; --muted:#374151; --accent:#1a56c4; --border:#b8c0cc; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Segoe UI, Arial, sans-serif; background:var(--bg); color:var(--text); color-scheme:light; }
+  .wrap { max-width:1300px; margin:0 auto; padding:24px; }
+  h1 { margin:0 0 4px; font-size:22px; }
+  p.sub { margin:0 0 20px; color:var(--muted); font-size:14px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px; margin-bottom:16px; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  button, label.btn { background:var(--accent); color:#fff; border:0; padding:10px 16px; border-radius:7px; font-size:14px; cursor:pointer; display:inline-block; }
+  label.btn.secondary { background:#fff; color:#1a56c4; border:2px solid #1a56c4; font-weight:600; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  input[type=file] { display:none; }
+  #status { font-size:14px; color:#111827; font-weight:500; margin-top:12px; }
+  progress { width:100%; height:10px; margin-top:10px; display:none; }
+  .tablewrap { overflow:auto; max-height:520px; border:1px solid var(--border); border-radius:8px; }
+  table { border-collapse:collapse; width:100%; font-size:12.5px; }
+  th, td { padding:7px 10px; color:#111827; border-bottom:1px solid #c9d0db; border-right:1px solid #d5dbe4; white-space:nowrap; text-align:left; }
+  th { background:#1e3a8a; color:#fff; font-weight:600; position:sticky; top:0; z-index:1; border-right:1px solid #3b5bb5; }
+  td.num { text-align:right; }
+  thead tr.frow th { background:#dbe4f7; padding:4px 6px; border-bottom:2px solid #1e3a8a; }
+  thead tr.frow input { width:100%; min-width:80px; padding:5px 7px; font-size:12.5px; color:#111827; background:#fff; border:1px solid #6b7280; border-radius:4px; }
+  thead tr.frow input:focus { outline:2px solid var(--accent); border-color:var(--accent); }
+  thead tr.frow input.active { background:#fff8c5; border-color:#b45309; }
+  .filterbar { display:flex; align-items:center; gap:12px; margin-bottom:10px; font-size:14px; font-weight:500; color:#111827; }
+  .filterbar button { padding:6px 12px; font-size:13px; }
+  td[contenteditable]:focus { outline:2px solid var(--accent); background:#fff8c5; }
+  tr.warn td { background:#fecaca; color:#7f1d1d; font-weight:500; }
+  tr.ocr td { background:#fde68a; color:#78350f; }
+  .note { font-size:14px; color:#111827; line-height:1.7; margin:14px 0 0; padding:12px 14px; background:#f3f4f6; border:1px solid var(--border); border-left:4px solid var(--accent); border-radius:6px; }
+  .tag { display:inline-block; padding:1px 8px; border-radius:4px; font-weight:600; border:1px solid; }
+  .tag.red { background:#fecaca; color:#7f1d1d; border-color:#b91c1c; }
+  .tag.yellow { background:#fde68a; color:#78350f; border-color:#b45309; }
+  :root{--bg:#f4f6f9;--card:#fff;--text:#182230;--muted:#617064;--accent:#1d6b52;--border:#e3e8e5;font-family:Inter,"Segoe UI",Arial,sans-serif;color-scheme:light;font-synthesis:none;text-rendering:optimizeLegibility}
+  body{background:var(--bg);color:var(--text)}
+  .wrap{max-width:1240px;padding:34px 28px 52px}
+  .topline{display:flex;align-items:center;gap:12px;margin-bottom:30px;color:#576577;font-size:13px;font-weight:650;letter-spacing:.04em;text-transform:uppercase}
+  .mark{display:grid;place-items:center;width:35px;height:35px;border-radius:10px;background:#1d6b52;color:#fff;font-size:12px;font-weight:800;letter-spacing:0}
+  h1{margin:0;color:#14251f;font-size:clamp(29px,4vw,42px);letter-spacing:-.045em;line-height:1.08}
+  p.sub{max-width:760px;margin:13px 0 22px;color:#617064;font-size:15px;line-height:1.65}
+  .notice{display:flex;gap:12px;align-items:flex-start;margin-bottom:22px;padding:14px 16px;border:1px solid #dce9e2;border-radius:12px;background:#f0f7f3;color:#345c48;font-size:13px;line-height:1.5}
+  .notice strong{color:#1e4834}
+  .card{margin-bottom:16px;padding:22px 24px;background:#fff;border:1px solid #e3e8e5;border-radius:16px;box-shadow:0 8px 26px #16332708}
+  .card h2{margin:0 0 6px;color:#182230;font-size:19px;letter-spacing:-.02em}
+  .card-intro{margin:0 0 16px;color:#617064;font-size:13px;line-height:1.55}
+  .row{gap:10px}
+  button,label.btn{display:inline-flex;align-items:center;justify-content:center;margin:0;padding:11px 16px;border:1px solid #1d6b52;border-radius:9px;background:#1d6b52;color:#fff;font-family:inherit;font-size:13px;font-weight:700;line-height:1.3;cursor:pointer;transition:background .15s,transform .15s}
+  button:hover,label.btn:hover{background:#15543f;transform:translateY(-1px)}
+  label.btn.secondary{border:1px solid #dce9e2;background:#fff;color:#1d6b52}
+  label.btn.secondary:hover{background:#f0f7f3}
+  button:disabled{background:#aab8b0;cursor:not-allowed;transform:none}
+  #status{margin-top:14px;color:#617064;font-size:13px;line-height:1.5}
+  progress{height:9px;accent-color:#1d6b52}
+  .filterbar{gap:12px;margin-bottom:12px;color:#617064;font-size:13px}
+  .filterbar button{width:auto;padding:8px 12px;border:1px solid #dce9e2;background:#fff;color:#1d6b52}
+  .tablewrap{max-height:520px;border:1px solid #e3e8e5;border-radius:10px}
+  table{font-size:12px}
+  th,td{padding:9px 11px;color:#34443a;border-bottom:1px solid #edf0ee;border-right:1px solid #edf0ee}
+  th{background:#f0f7f3;color:#1e4834;border-right-color:#e3e8e5}
+  thead tr.frow th{background:#f8faf8;border-bottom:2px solid #cfe3d8}
+  thead tr.frow input{border:1px solid #d7e0da;border-radius:6px;color:#34443a}
+  thead tr.frow input:focus{outline:2px solid #a9cdb8;border-color:#1d6b52}
+  thead tr.frow input.active{background:#fff8e6;border-color:#c99b45}
+  td[contenteditable]:focus{outline:2px solid #1d6b52;background:#fff8e6}
+  tr.warn td{background:#fff0ed;color:#873b2c}
+  tr.ocr td{background:#fff8e6;color:#745117}
+  .note{padding:12px 14px;border:1px solid #e3e8e5;border-left:4px solid #1d6b52;border-radius:9px;background:#f8faf8;color:#617064;font-size:13px}
+  .tag.red{border-color:#f0c8bf;border-radius:20px;background:#fff2ef;color:#873b2c}
+  .tag.yellow{border-color:#f0e0b0;border-radius:20px;background:#fff8e6;color:#745117}
+  @media(max-width:760px){.wrap{padding:23px 16px 38px}.card{padding:18px 16px}}
+  @media(max-width:520px){.wrap{padding:22px 14px 32px}.row{align-items:stretch;flex-direction:column}.row>*{width:100%}.filterbar{align-items:flex-start;flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topline"><span class="mark">TDS</span> Challan Studio</div>
+  <h1>TDS Challan Consolidator for Tax Year 2026-27 Onwards</h1>
+  <p class="sub">Read ITNS 281 challan receipts from a folder or selected PDFs, review extracted details, and export everything in one Excel sheet.</p>
+  <div class="notice"><span aria-hidden="true">●</span><div><strong>Private and local.</strong> Your PDFs are processed in this browser and are not uploaded. Review the extracted rows before downloading the Excel workbook.</div></div>
+
+  <div class="card">
+    <h2>Add challan PDFs</h2>
+    <p class="card-intro">Select a folder containing challan receipts, or choose individual PDF files.</p>
+    <div class="row">
+      <label class="btn">Select Folder (e.g. Challan)
+        <input type="file" id="folderInput" webkitdirectory directory multiple>
+      </label>
+      <label class="btn secondary">Or select PDF files
+        <input type="file" id="filesInput" accept=".pdf,application/pdf" multiple>
+      </label>
+      <button id="downloadBtn" disabled>Download Excel</button>
+    </div>
+    <progress id="prog" value="0" max="1"></progress>
+    <div id="status">No files selected yet.</div>
+  </div>
+
+  <div class="card">
+    <h2>Challan data</h2>
+    <p class="card-intro">Review and edit the extracted rows, clear filters, and download the consolidated workbook.</p>
+    <div class="filterbar"><span id="fcount">Showing 0 of 0 rows</span><button id="clearFilters" type="button">Clear filters</button></div>
+    <div class="tablewrap"><table id="tbl"></table></div>
+    <p class="note">Cells are editable — correct anything before downloading. <span class="tag red">Red rows</span> could not be read reliably. <span class="tag yellow">Yellow rows</span> came from image-only PDFs read by OCR — please glance at them to confirm.</p>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// <PARSER>
+const HEADERS = ["Sr No","File Name","TAN","Name","Tax Year","Major Head","Deductee Type","Minor Head","Residential Status",
+  "Section Code","Section","Section Description","Challan No","CIN","BSR Code","Date of Deposit","Tender Date",
+  "Mode of Payment","Bank Name","Bank Reference Number",
+  "Tax","Surcharge","Education Cess","Interest","Penalty","Fee under section 427","Others","Total","Amount in Words","Read Method"];
+const NUM_COLS = new Set(["Tax","Surcharge","Education Cess","Interest","Penalty","Fee under section 427","Others","Total"]);
+
+function toNum(s) { return parseFloat(String(s).replace(/[,₹\s]/g,'')); }
+
+// items: [{s,x,y}] for one page  ->  array of line strings (top to bottom)
+function groupLines(items) {
+  const arr = items.slice().sort((a,b) => b.y - a.y || a.x - b.x);
+  const lines = []; let cur = [], lastY = null;
+  for (const it of arr) {
+    if (lastY === null || Math.abs(it.y - lastY) <= 3) cur.push(it);
+    else { lines.push(cur); cur = [it]; }
+    lastY = it.y;
+  }
+  if (cur.length) lines.push(cur);
+  return lines.map(l => {
+    l.sort((a,b)=>a.x-b.x);
+    let t = "";
+    l.forEach((it,k) => {
+      if (k) {
+        const p = l[k-1], gap = it.x - (p.x + (p.w || 0));
+        t += (p.w === undefined) ? "  " : gap < 0.8 ? "" : gap < 7 ? " " : "  ";
+      }
+      t += it.s.trim();
+    });
+    return t;
+  });
+}
+
+function field(lines, label) {
+  const re = new RegExp("^" + label + "\\s*:\\s*(.*)$", "i");
+  for (const l of lines) { const m = l.match(re); if (m) return m[1].replace(/\s{2,}/g,' ').trim(); }
+  return "";
+}
+
+// Section-wise table, read by column position so wrapped cells don't get mixed up
+function parseSections(items) {
+  const hd = items.find(i => i.s.trim().toLowerCase() === "description");
+  if (!hd) return [];
+  const find = t => items.find(i => i.s.trim().toLowerCase() === t && Math.abs(i.y - hd.y) < 3);
+  const hDesc = hd, hSec = find("section"), hCode = find("code"), hTax = find("tax");
+  if (!hSec || !hCode || !hTax) return [];
+  const topY = hDesc.y;
+  const totalRow = items.filter(i => i.s.trim().toLowerCase() === "total" && i.y < topY - 10 && i.x < hSec.x)
+                        .sort((a,b)=>b.y-a.y)[0];
+  const botY = totalRow ? totalRow.y + 8 : topY - 400;
+  const b1 = hDesc.x - 6, b2 = hSec.x - 6, b3 = hCode.x - 6, b4 = hTax.x - 6;
+  const body = items.filter(i => i.y < topY - 6 && i.y > botY);
+  const snos = body.filter(i => i.x < b1 && /^\d+$/.test(i.s.trim())).sort((a,b)=>b.y-a.y);
+  const out = [];
+  snos.forEach((sn, idx) => {
+    const yTop = sn.y + 4, yBot = idx + 1 < snos.length ? snos[idx+1].y + 4 : botY;
+    const rowItems = body.filter(i => i.y <= yTop && i.y > yBot);
+    const colText = (lo, hi) => groupLines(rowItems.filter(i => i.x >= lo && i.x < hi)).join(' ').replace(/\s+/g,' ').replace(/\[\s+/g,'[').replace(/\s+\]/g,']').trim();
+    out.push({ desc: colText(b1, b2), section: colText(b2, b3), code: colText(b3, b4) });
+  });
+  return out;
+}
+
+function sumLine(lines, labelRe) {
+  const re = new RegExp("^(?:[A-G]\\s+)?(?:" + labelRe + ")\\s+(?:₹|Rs\\.?)?\\s*([\\d,]+(?:\\.\\d+)?)\\s*$", "i");
+  for (const l of lines) { const m = l.replace(/\s{2,}/g,' ').match(re); if (m) return toNum(m[1]); }
+  return "";
+}
+
+// pages: array of item arrays (one per PDF page)
+function parseChallan(pages, fileName) {
+  const lines = pages.flatMap(groupLines);
+  const r = { "File Name": fileName, "Read Method": "Text" };
+  r["TAN"] = field(lines, "TAN");
+  r["Name"] = field(lines, "Name").replace(/^[^A-Za-z0-9(]+/, "").trim();
+  r["Tax Year"] = field(lines, "Tax Year") || field(lines, "Assessment Year");
+  r["Major Head"] = field(lines, "Major Head");
+  const mh = (r["Major Head"].match(/\((\d{4})\)/) || [,""])[1];
+  r["Deductee Type"] = mh === "0020" ? "Corporate" : mh === "0021" ? "Non-Corporate" : "";
+  r["Minor Head"] = field(lines, "Minor Head");
+  r["Residential Status"] = field(lines, "Residential Status");
+  r["CIN"] = field(lines, "CIN");
+  r["BSR Code"] = field(lines, "BSR\\s*code");
+  r["Challan No"] = field(lines, "Challan\\s*No");
+  r["Date of Deposit"] = field(lines, "Date of Deposit");
+  r["Tender Date"] = field(lines, "Tender Date");
+  r["Mode of Payment"] = field(lines, "Mode of Payment");
+  r["Bank Name"] = field(lines, "Bank Name");
+  r["Bank Reference Number"] = field(lines, "Bank Reference Number");
+  r["Amount in Words"] = field(lines, "Amount \\(in words\\)");
+
+  let secs = [];
+  for (const p of pages) { secs = parseSections(p); if (secs.length) break; }
+  r["Section Code"] = secs.map(s => s.code).join(" | ");
+  r["Section"] = secs.map(s => s.section).join(" | ");
+  r["Section Description"] = secs.map(s => s.desc).join(" | ");
+
+  r["Tax"] = sumLine(lines, "Tax");
+  r["Surcharge"] = sumLine(lines, "Surcharge");
+  r["Education Cess"] = sumLine(lines, "Education Cess");
+  r["Interest"] = sumLine(lines, "Interest");
+  r["Penalty"] = sumLine(lines, "Penalty");
+  r["Fee under section 427"] = sumLine(lines, "Fee under section \\d+");
+  r["Others"] = sumLine(lines, "Others");
+  let total = "";
+  for (const l of lines) { const m = l.replace(/\s{2,}/g,' ').match(/^Total\s*\(A\+B[^)]*\)\s*(?:₹|Rs\.?)?\s*([\d,]+(?:\.\d+)?)/i); if (m) { total = toNum(m[1]); break; } }
+  if (total === "") { const a = field(lines, "Amount \\(in Rs\\.\\)").match(/([\d,]+(?:\.\d+)?)/); if (a) total = toNum(a[1]); }
+  r["Total"] = total;
+  r._ok = !!(r["TAN"] && r["Total"] !== "" && r["Challan No"]);
+  return r;
+}
+
+
+// ---- amount in words -> number (Indian system), tolerant of OCR spelling errors ----
+const NW = {one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,
+  sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+const NM = {thousand:1e3, lakh:1e5, lakhs:1e5, crore:1e7, crores:1e7};
+const NWORDS = [...Object.keys(NW), "hundred", ...Object.keys(NM)];
+function lev(a, b) {
+  const d = Array.from({length: a.length + 1}, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+function fuzzyWord(t) {
+  if (NWORDS.includes(t)) return t;
+  let best = null, bd = 99;
+  for (const w of NWORDS) { const dd = lev(t, w); if (dd < bd) { bd = dd; best = w; } }
+  return bd <= (t.length >= 6 ? 2 : 1) ? best : null;
+}
+function wordsToNum(str) {
+  const toks = String(str).toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(Boolean);
+  let total = 0, cur = 0, found = false;
+  for (const t of toks) {
+    if (["rupees","rupee","only","and","paise"].includes(t)) continue;
+    const k = fuzzyWord(t); if (!k) continue;
+    found = true;
+    if (k in NW) cur += NW[k];
+    else if (k === "hundred") cur = (cur || 1) * 100;
+    else { total += (cur || 1) * NM[k]; cur = 0; }
+  }
+  return found ? total + cur : "";
+}
+
+// ---- OCR text parser (for image-only PDFs) ----
+function parseOcrText(text, fileName, items) {
+  const lines = text.split(/\r?\n/).map(l => l.replace(/\s+/g,' ').replace(/^[^A-Za-z0-9]+/, '').trim()).filter(Boolean);
+  const f = label => {
+    const re = new RegExp("^" + label + "\\s*[^A-Za-z0-9\\s]{0,3}\\s*(.+)$", "i");
+    for (const l of lines) { const m = l.match(re); if (m) return m[1].replace(/^[^A-Za-z0-9(₹]+/, "").replace(/[\s|¦©]+$/, "").trim(); }
+    return "";
+  };
+  const amt = v => { const m = String(v).replace(/\s/g,'').match(/(\d[\d,]*(?:\.\d+)?)$/); return m ? toNum(m[1]) : ""; };
+  const isZeroTok = v => /^\D{0,2}\d?0$/.test(String(v).replace(/\s/g,''));   // ₹0 is often misread as 20, 70, z0, =0 ...
+  const zeroOrAmt = v => isZeroTok(v) ? 0 : amt(v);
+
+  const r = { "File Name": fileName, "Read Method": "OCR" };
+  r["TAN"] = (f("TAN").match(/[A-Z]{4}\d{5}[A-Z]/i) || [""])[0].toUpperCase();
+  r["Name"] = f("Name");
+  r["Tax Year"] = (f("Tax Year").match(/\d{4}\s*-\s*\d{2,4}/) || [""])[0].replace(/\s/g,'');
+  r["Major Head"] = f("Major Head");
+  const mh = (r["Major Head"].match(/\((\d{4})\)/) || [,""])[1];
+  r["Deductee Type"] = mh === "0020" ? "Corporate" : mh === "0021" ? "Non-Corporate" : "";
+  r["Minor Head"] = f("Minor Head");
+  r["Residential Status"] = f("Residential Status");
+  { // CIN = 14 digits + 4-letter bank code (e.g. 26100600196024UTIB); fix look-alike characters on each side
+    const raw = f("CIN").replace(/\s/g, "");
+    const m = raw.match(/([0-9OoQDlI|!]{14})([A-Za-z0-9|!]{4})/);
+    r["CIN"] = m ? m[1].replace(/[OoQD]/g, "0").replace(/[lI|!]/g, "1") + m[2].replace(/[l|!1]/g, "I").toUpperCase().replace(/0/g, "O")
+                 : (raw.match(/[A-Z0-9]{15,25}/i) || [""])[0].toUpperCase();
+  }
+  r["BSR Code"] = (f("BSR\\s*code").match(/\d{7}/) || [""])[0];
+  r["Challan No"] = (f("Challan\\s*No").match(/\d+/) || [""])[0];
+  r["Date of Deposit"] = f("Date of Deposit");
+  r["Tender Date"] = (f("Tender Date").match(/\d{2}\/\d{2}\/\d{4}/) || [""])[0];
+  r["Mode of Payment"] = f("Mode of Payment");
+  r["Bank Name"] = f("Bank Name");
+  { // bank ref looks like AI0004934946: "AI" + 10 digits. OCR often reads I as l/1/| and adds junk (e.g. "1 Al000...")
+    const raw = f("Bank Reference Number");
+    const m = raw.match(/A\s?[lI1|!]\s?([0-9OoQDlI|!]{8,12})/);
+    const fixDigits = d => d.replace(/[OoQD]/g, "0").replace(/[lI|!]/g, "1");
+    r["Bank Reference Number"] = m ? "AI" + fixDigits(m[1]) : raw.replace(/^[^A-Za-z0-9]+/, "").replace(/^1\s+(?=A)/, "").replace(/^Al/, "AI");
+  }
+
+  // section table row
+  const iSec = lines.findIndex(l => /Section-?\s*Wise/i.test(l));
+  const iBrk = lines.findIndex(l => /Tax Breakup/i.test(l));
+  const seg = lines.slice(iSec + 1, iBrk > iSec ? iBrk : undefined);
+  let rowAmts = [], code = "", section = "", desc = "";
+  const ri = seg.findIndex(l => /^\d+\s+.*\s\d{4}\s+\S{0,2}\s?\d/.test(l));
+  if (ri >= 0) {
+    const m = seg[ri].match(/^\d+\s+(.*?)\s+(\d{4})\s+(.*)$/);
+    if (m) {
+      code = m[2];
+      rowAmts = (m[3].match(/\d[\d,]*/g) || []).map(toNum).filter(n => !isNaN(n));
+      const sm = m[1].match(/^(.*?)(?:\s+)?(39\d(?:\(\d+\))?)(?:\s*\[.*)?$/);
+      desc = (sm ? sm[1] : m[1]);
+      section = sm ? sm[2] : "";
+    }
+    const cont = seg.slice(ri + 1).filter(l => !/^Total\b/i.test(l)).join(' ');
+    desc = (desc + ' ' + cont).replace(/\s+/g,' ').trim();
+    const ref = (desc.match(/\[Table:[^\]]*\]/) || [""])[0];
+    if (section && ref) section = section + " " + ref.replace(/\s+/g,' ');
+  }
+  // prefer column-aware reading using OCR word positions (keeps wrapped cells apart)
+  if (items && items.length) {
+    const secs = parseSections(items.filter(i => !/^[|¦!]+$/.test(i.s.trim())));
+    // Table reference (e.g. "Sl. No. 6(i).D(a)") is fixed by the section code, so use that when we know it
+    const KNOWN = {"1008":"2(ii).D(a)","1009":"2(ii).D(b)","1023":"6(i).D(a)","1024":"6(i).D(b)","1027":"6(iii).D(b)","1031":"8(ii)"};
+    const STRICT = /\[Table:\s*Sl\.\s*No\.\s*\d+\([ivx]+\)(?:\.[A-Z]\([a-z]\))?\]/;
+    const tidyRef = t => { let m = (t.match(/\[Table:.*$/) || [""])[0].replace(/\bSI\./g, "Sl.").replace(/\s+/g, " ").trim(); return m && !/\]$/.test(m) ? m.replace(/[lI|1!)]?$/, "]") : m; };
+    secs.forEach(x => {
+      x.desc = x.desc.replace(/\bSI\./g, "Sl.").replace(/\s+[|¦]\s+/g, " ").replace(/\bofa\b/g, "of a").replace(/\banda\b/g, "and a")
+                     .replace(/\s-\s+-\s/g, " - ").replace(/purchase of - any goods/, "purchase of any goods").replace(/\s+/g, " ").trim();
+      const no = (x.section.match(/^\s*(39\d(?:\(\d+\))?)/) || [,""])[1] || (x.desc.match(/\b(39\d\(\d+\))\s*\[Table/) || [,""])[1];
+      let ref = KNOWN[x.code] ? "[Table: Sl. No. " + KNOWN[x.code] + "]" : "";
+      if (!ref) { const c = [tidyRef(x.section), tidyRef(x.desc)].filter(Boolean); ref = c.find(v => STRICT.test(v)) || c[0] || ""; }
+      if (/\[Table:/.test(x.desc) && ref) x.desc = x.desc.replace(/\[Table:.*$/, ref);
+      x.desc = x.desc.replace(/([A-Za-z.)])\s+(39\d\(\d+\)\s*\[Table)/, "$1 - $2");   // restore the "-" before the section reference if OCR lost it
+      if (no) x.section = ref ? no + " " + ref : no;
+    });
+    if (secs.length && secs.every(x => /^\d{4}$/.test(x.code))) {
+      code = secs.map(x => x.code).join(" | "); section = secs.map(x => x.section).join(" | "); desc = secs.map(x => x.desc).join(" | ");
+    }
+  }
+  r["Section Code"] = code; r["Section"] = section; r["Section Description"] = desc;
+
+  // tax breakup
+  const brk = iBrk >= 0 ? lines.slice(iBrk + 1) : lines;
+  const pick = labelRe => { for (const l of brk) { const m = l.match(new RegExp("^(?:[A-G]\\s+)?(?:" + labelRe + ")\\s+(.+)$", "i")); if (m && !/^\(/.test(m[1])) return m[1]; } return null; };
+  const fix = v => v === null ? 0 : zeroOrAmt(v);
+  const taxRaw = pick("Tax");
+  r["Surcharge"] = fix(pick("Surcharge")); r["Education Cess"] = fix(pick("Education Cess"));
+  r["Interest"] = fix(pick("Interest")); r["Penalty"] = fix(pick("Penalty"));
+  r["Fee under section 427"] = fix(pick("Fee under section \\d+")); r["Others"] = fix(pick("Others"));
+  let totRaw = null;
+  for (const l of brk) { const m = l.match(/^Total\s*\(A.*?\)\s*(.+)$/i); if (m) { totRaw = m[1]; break; } }
+
+  // amount in words (most reliable source for the total): take the text after the first "Rupees"
+  let wordsTxt = "";
+  const wi = lines.findIndex(l => /\bRupees\b/i.test(l));
+  if (wi >= 0) {
+    wordsTxt = lines[wi].replace(/^.*?\b(Rupees\b)/i, "$1");
+    if (!/only\s*$/i.test(wordsTxt) && lines[wi + 1] && !/[:]/.test(lines[wi + 1])) wordsTxt += " " + lines[wi + 1];
+    wordsTxt = wordsTxt.replace(/\s+/g, " ").trim();
+  }
+  r["Amount in Words"] = wordsTxt;
+  const W = wordsToNum(wordsTxt);
+
+  // gather the numeric readings of the total from different places on the page
+  const cands = [amt(f("Amount \\(in Rs\\.\\)")), taxRaw ? amt(taxRaw) : "", totRaw ? amt(totRaw) : "", rowAmts[0] ?? "", rowAmts[rowAmts.length-1] ?? ""]
+    .filter(v => v !== "" && !isNaN(v) && v > 0);
+  const hasW = W !== "" && W > 0;
+  // a numeric reading "matches" the words if equal, or equal with one stray leading digit (a misread ₹)
+  const matchesW = hasW && cands.some(v => v === W || String(v) === String(W) || (String(v).endsWith(String(W)) && String(v).length === String(W).length + 1));
+  const counts = {}; cands.forEach(v => counts[v] = (counts[v]||0) + 1);
+  const best = Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+  const agree = best !== undefined && counts[best] >= 2;
+  const total = matchesW ? W : (agree ? Number(best) : (hasW ? W : (best !== undefined ? Number(best) : "")));
+
+  // if the Tax line already equals the total, every other head is zero (guards against ₹0 -> "20")
+  const taxMatches = taxRaw !== null && (amt(taxRaw) === total || (String(amt(taxRaw)).endsWith(String(total)) && String(amt(taxRaw)).length === String(total).length + 1));
+  const heads = ["Surcharge","Education Cess","Interest","Penalty","Fee under section 427","Others"];
+  if (taxMatches) heads.forEach(c => r[c] = 0);
+  const others = heads.reduce((s,c)=>s+(Number(r[c])||0),0);
+  r["Total"] = total;
+  r["Tax"] = total === "" ? "" : total - others;
+  r._ok = !!((matchesW || (agree && !hasW)) && r["TAN"] && r["Challan No"] && r["CIN"]);
+  return r;
+}
+// </PARSER>
+
+let rows = [];
+const statusEl = document.getElementById('status');
+const prog = document.getElementById('prog');
+const dlBtn = document.getElementById('downloadBtn');
+
+// pdf.js worker loaded via blob so it works when this HTML is opened from disk
+async function initPdf() {
+  const url = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const code = await (await fetch(url)).text();
+  pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([code], {type:'text/javascript'}));
+}
+
+let ocrWorker = null;
+async function ocrFile(file) {
+  if (!ocrWorker) {
+    statusEl.textContent = "Image-only PDF found — loading OCR engine (first time only)…";
+    ocrWorker = await Tesseract.createWorker('eng');
+    await ocrWorker.setParameters({ tessedit_pageseg_mode: '4' });
+  }
+  const pdf = await pdfjsLib.getDocument({data: await file.arrayBuffer()}).promise;
+  const page = await pdf.getPage(1);
+  const vp = page.getViewport({scale: 4});
+  const cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
+  const ctx = cv.getContext('2d', {willReadFrequently:true});
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+  await page.render({canvasContext: ctx, viewport: vp}).promise;
+  const img = ctx.getImageData(0,0,cv.width,cv.height), d = img.data;   // black & white to drop the watermark
+  for (let i = 0; i < d.length; i += 4) { const g = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]; const v = g > 150 ? 255 : 0; d[i]=d[i+1]=d[i+2]=v; }
+  ctx.putImageData(img, 0, 0);
+  const { data } = await ocrWorker.recognize(cv);
+  const items = (data.words || []).filter(w => w.text.trim()).map(w => ({ s: w.text, x: w.bbox.x0/4, y: (cv.height - w.bbox.y1)/4, w: (w.bbox.x1 - w.bbox.x0)/4 }));
+  return { text: data.text, items };
+}
+
+async function readPages(file) {
+  const pdf = await pdfjsLib.getDocument({data: await file.arrayBuffer()}).promise;
+  const pages = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const content = await (await pdf.getPage(p)).getTextContent();
+    pages.push(content.items.filter(i => i.str.trim() !== '').map(i => ({s:i.str, x:i.transform[4], y:i.transform[5], w:i.width})));
+  }
+  return pages;
+}
+
+function render() {
+  const t = document.getElementById('tbl');
+  let h = "<thead><tr class=\"hrow\">" + HEADERS.map(x=>`<th>${x}</th>`).join('') + "</tr>" +
+    "<tr class=\"frow\">" + HEADERS.map(c => c === "Sr No" ? "<th></th>" :
+      `<th><input type="text" placeholder="Filter…" data-fc="${c}" value="${String(filters[c]||'').replace(/"/g,'&quot;')}"></th>`).join('') + "</tr></thead><tbody>";
+  rows.forEach((r,i) => {
+    h += `<tr class="${!r._ok?'warn':(r["Read Method"]==='OCR'?'ocr':'')}">` + HEADERS.map(c => {
+      const v = c === "Sr No" ? i+1 : (r[c] ?? "");
+      const ed = (c === "Sr No") ? "" : ` contenteditable="true" data-r="${i}" data-c="${c}"`;
+      const shown = NUM_COLS.has(c) && v !== "" && !isNaN(v) ? Number(v).toLocaleString('en-IN') : v;
+      return `<td class="${NUM_COLS.has(c)?'num':''}"${ed}>${String(shown).replace(/</g,'&lt;')}</td>`;
+    }).join('') + "</tr>";
+  });
+  if (rows.length) {
+    h += `<tr id="totrow" style="font-weight:700;background:#dbe4f7;color:#111827"><td id="totlabel" colspan="${HEADERS.indexOf('Tax')}">TOTAL (${rows.length} challans)</td>` +
+      [...NUM_COLS].map(c => `<td class="num" data-tot="${c}">${rows.reduce((s,r)=>s+(parseFloat(r[c])||0),0).toLocaleString('en-IN')}</td>`).join('') + "<td></td></tr>";
+  }
+  t.innerHTML = h + "</tbody>";
+  t.querySelectorAll('td[contenteditable]').forEach(td => td.addEventListener('blur', () => {
+    const r = rows[td.dataset.r], c = td.dataset.c;
+    let v = td.textContent.trim();
+    if (NUM_COLS.has(c) && v !== "") { const n = toNum(v); if (!isNaN(n)) v = n; }
+    r[c] = v;
+  }));
+  dlBtn.disabled = rows.length === 0;
+  t.querySelectorAll('input[data-fc]').forEach(inp => inp.addEventListener('input', () => { filters[inp.dataset.fc] = inp.value; applyFilter(); }));
+  const hr = t.querySelector('tr.hrow'); if (hr) t.querySelectorAll('tr.frow th').forEach(th => th.style.top = hr.offsetHeight + 'px');
+  applyFilter();
+}
+
+const filters = {};
+function applyFilter() {
+  const t = document.getElementById('tbl');
+  const active = Object.entries(filters).filter(([,v]) => String(v).trim() !== '').map(([c,v]) => [c, String(v).trim().toLowerCase()]);
+  t.querySelectorAll('input[data-fc]').forEach(i => i.classList.toggle('active', String(filters[i.dataset.fc]||'').trim() !== ''));
+  const sums = {}; NUM_COLS.forEach(c => sums[c] = 0);
+  let shown = 0;
+  t.querySelectorAll('tbody tr').forEach(tr => {
+    if (tr.id === 'totrow') return;
+    const first = tr.querySelector('td[data-r]'); if (!first) return;
+    const r = rows[first.dataset.r];
+    const ok = active.every(([c, q]) => {
+      const raw = String(r[c] ?? '').toLowerCase();
+      const disp = NUM_COLS.has(c) && raw !== '' && !isNaN(raw) ? Number(raw).toLocaleString('en-IN').toLowerCase() : raw;
+      return raw.includes(q) || disp.includes(q);
+    });
+    tr.style.display = ok ? '' : 'none';
+    if (ok) { shown++; NUM_COLS.forEach(c => sums[c] += (parseFloat(r[c]) || 0)); }
+  });
+  const lbl = document.getElementById('totlabel');
+  if (lbl) {
+    lbl.textContent = active.length ? `TOTAL OF FILTERED (${shown} of ${rows.length} challans)` : `TOTAL (${rows.length} challans)`;
+    t.querySelectorAll('td[data-tot]').forEach(td => td.textContent = sums[td.dataset.tot].toLocaleString('en-IN'));
+  }
+  document.getElementById('fcount').textContent = `Showing ${shown} of ${rows.length} rows` + (active.length ? ' (filtered)' : '');
+}
+document.getElementById('clearFilters').addEventListener('click', () => {
+  Object.keys(filters).forEach(k => delete filters[k]);
+  document.querySelectorAll('input[data-fc]').forEach(i => i.value = '');
+  applyFilter();
+});
+
+async function processFiles(fileList) {
+  const files = [...fileList].filter(f => /\.pdf$/i.test(f.name)).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+  if (!files.length) { statusEl.textContent = "No PDF files found in the selection."; return; }
+  rows = []; render();
+  prog.style.display = 'block'; prog.max = files.length; prog.value = 0;
+  statusEl.textContent = "Loading PDF engine…";
+  try { await initPdf(); } catch(e) { statusEl.textContent = "Could not load PDF library. Check your internet connection and reopen."; return; }
+  let bad = 0;
+  for (let i = 0; i < files.length; i++) {
+    statusEl.textContent = `Reading ${i+1} of ${files.length}: ${files[i].name}`;
+    try {
+      const pages = await readPages(files[i]);
+      const r = pages.some(p => p.length) ? parseChallan(pages, files[i].name)
+                                          : await ocrFile(files[i]).then(o => parseOcrText(o.text, files[i].name, o.items));
+      if (!r._ok) bad++;
+      rows.push(r);
+    } catch (e) { bad++; rows.push({"File Name": files[i].name, _ok:false}); }
+    prog.value = i+1;
+  }
+  render();
+  statusEl.textContent = `Done. ${files.length} PDFs processed` + (bad ? `, ${bad} need manual checking (red rows).` : ".");
+}
+
+document.getElementById('folderInput').addEventListener('change', e => processFiles(e.target.files));
+document.getElementById('filesInput').addEventListener('change', e => processFiles(e.target.files));
+
+dlBtn.addEventListener('click', () => {
+  const data = rows.map((r,i) => HEADERS.map(c => c === "Sr No" ? i+1 : (r[c] ?? "")));
+  const totalRow = HEADERS.map(c => c === "File Name" ? "TOTAL" : NUM_COLS.has(c) ? rows.reduce((s,r)=>s+(parseFloat(r[c])||0),0) : "");
+  const ws = XLSX.utils.aoa_to_sheet([HEADERS, ...data, totalRow]);
+  ws['!cols'] = HEADERS.map((h,ci) => ({wch: Math.min(45, Math.max(h.length, ...data.map(r => String(r[ci]).length)) + 2)}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "TDS Challans");
+  XLSX.writeFile(wb, "TDS_Challans_Consolidated.xlsx");
+});
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accounting, GST &amp; Tax Tools</title>
+<style>
+  :root { --bg:#f3f5f7; --bar:#14212e; --tab:#1d3144; --tab-hover:#27425b; --accent:#2f9bff; --text:#e8eef4; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; display: flex; flex-direction: column; background: var(--bg); }
+  header { background: var(--bar); color: var(--text); padding: 10px 18px; display: flex; align-items: baseline; gap: 12px; }
+  header h1 { font-size: 1.15rem; font-weight: 700; }
+  header span { font-size: .8rem; opacity: .65; }
+  nav { display: flex; gap: 2px; background: var(--bar); padding: 0 12px; overflow-x: auto; white-space: nowrap; scrollbar-width: thin; }
+  nav button {
+    flex: 0 0 auto; padding: 11px 18px; border: 0; background: var(--tab); color: var(--text); cursor: pointer;
+    font: inherit; font-size: .9rem; border-radius: 8px 8px 0 0; border-bottom: 3px solid transparent;
+  }
+  nav button:hover { background: var(--tab-hover); }
+  nav button.active { background: var(--bg); color: #14212e; font-weight: 700; border-bottom-color: var(--accent); }
+  main { flex: 1; position: relative; min-height: 0; }
+  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; display: none; }
+  iframe.active { display: block; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Accounting, GST &amp; Tax Tools</h1>
+    <span>Select a tab to open a tool (Try With Recent Years)</span>
+  </header>
+
+  <!--
+    To update a tool: replace its file in the "tools" folder (same file name) and bump the ?v= number below.
+    To add a tool: copy one <button> line, give it a new data-id, label and file.
+  -->
+  <nav id="tabs" role="tablist">
+    <button data-id="itnav"      data-src="tools/income-tax-navigator-dashboard.html?v=1">Income Tax Navigator</button>
+    <button data-id="26as"       data-src="tools/26as-converter.html?v=2">26AS Converter and Reconciliation</button>
+    <button data-id="tds"        data-src="tools/tds-challan-consolidator.html?v=1">TDS Challan Consolidator</button>
+    <button data-id="gstr2b"     data-src="tools/gstr2b-consolidator.html?v=2">GSTR-2B Consolidator</button>
+    <button data-id="itc-single" data-src="tools/itc-reconciliation-single-gstin.html?v=2">ITC Reconciliation (Single GSTIN)</button>
+    <button data-id="itc-multi"  data-src="tools/itc-reconciliation-multiple-gstin.html?v=2">ITC Reconciliation (Multiple GSTIN)</button>
+    <button data-id="ledger"     data-src="tools/rename-ledger.html?v=2">Rename Ledger</button>
+    <button data-id="paste"      data-src="tools/excel-paste-values.html?v=1">Excel Paste Values</button>
+    <button data-id="pdf"        data-src="tools/pdf-page-numberer.html?v=2">PDF Page Numberer</button>
+  </nav>
+
+  <main id="panes"></main>
+
+<script>
+  const tabs = [...document.querySelectorAll('#tabs button')];
+  const panes = document.getElementById('panes');
+  const frames = {};
+
+  function openTab(id) {
+    const btn = tabs.find(b => b.dataset.id === id) || tabs[0];
+    tabs.forEach(b => b.classList.toggle('active', b === btn));
+    // Each tool loads once, on first visit, then stays alive so uploaded files/results are kept when switching tabs
+    if (!frames[btn.dataset.id]) {
+      const f = document.createElement('iframe');
+      f.src = btn.dataset.src;
+      f.title = btn.textContent;
+      panes.appendChild(f);
+      frames[btn.dataset.id] = f;
+    }
+    Object.entries(frames).forEach(([k, f]) => f.classList.toggle('active', k === btn.dataset.id));
+    btn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    document.title = btn.textContent + ' \u2013 Accounting, GST & Tax Tools';
+    // No URL hash is saved, so a refresh always returns to the original state
+  }
+
+  tabs.forEach(b => b.addEventListener('click', () => openTab(b.dataset.id)));
+
+  // On every load/refresh: remove any leftover #hash and open the first tab
+  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  openTab(tabs[0].dataset.id);
+</script>
+</body>
+</html>

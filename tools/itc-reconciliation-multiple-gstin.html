@@ -1,0 +1,2745 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f4f6f9">
+<title>GSTR-2B Reconciliation Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<style>
+  :root{font-family:Inter,"Segoe UI",Arial,sans-serif;color:#182230;background:#f4f6f9;font-synthesis:none;text-rendering:optimizeLegibility;
+    --ink:#182230;--ink-soft:#617064;--ink-faint:#7b877f;--line:#e3e8e5;--accent:#1d6b52;--accent-deep:#15543f;--accent-tint:#f0f7f3;--warn:#b3261e;--warn-tint:#fff2ef}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:#f4f6f9;color:var(--ink);line-height:1.5}
+  [hidden]{display:none !important}
+  a{color:var(--accent)}
+  .page{max-width:1180px;margin:0 auto;padding:34px 28px 0}
+  .page.page-wide{padding-top:0;max-width:min(1760px,97vw);padding-left:20px;padding-right:20px}
+  .topline{display:flex;align-items:center;gap:12px;margin-bottom:30px;color:#576577;font-size:13px;font-weight:650;letter-spacing:.04em;text-transform:uppercase}
+  .mark{display:grid;place-items:center;width:35px;height:35px;border-radius:10px;background:#1d6b52;color:#fff;font-size:12px;font-weight:800;letter-spacing:0}
+  header.hero{margin-bottom:0}
+  h1{font-size:clamp(29px,4vw,42px);letter-spacing:-.045em;line-height:1.08;margin:0;color:#14251f;font-weight:700}
+  .lede{max-width:730px;color:#617064;line-height:1.65;margin:13px 0 25px;font-size:15px}
+  .lede strong{color:#253a30}
+  .notice{display:flex;gap:12px;align-items:flex-start;border:1px solid #dce9e2;background:#f0f7f3;border-radius:12px;padding:14px 16px;color:#345c48;font-size:13px;line-height:1.5;margin-bottom:22px}
+  .notice strong{color:#1e4834}
+  .panel{background:#fff;border:1px solid #e3e8e5;border-radius:16px;box-shadow:0 8px 26px #16332708}
+  .steps{display:block}
+  .step{padding:22px 24px;margin-top:16px}
+  .step-body h2{display:flex;align-items:center;font-size:19px;letter-spacing:-.02em;margin:0 0 8px;font-weight:700;color:var(--ink)}
+  .step-num{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#eaf3ed;color:#1d6b52;font-weight:800;font-size:14px;margin-right:8px;flex:none}
+  .step-body p{color:#617064;font-size:13px;line-height:1.55;margin:0 0 14px;max-width:none}
+  .step-body p strong{color:#34443a}
+  .step.is-disabled{opacity:.55;pointer-events:none}
+  .dropzone{min-height:176px;border:1.5px dashed #b9ccc1;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:22px;background:#fbfdfb;cursor:pointer;transition:.18s}
+  .dropzone:hover,.dropzone.is-dragover{border-color:#1d6b52;background:#f0f7f3}
+  .dropzone:focus-visible{outline:2px solid #1d6b52;outline-offset:2px}
+  .dropzone::before{content:"\2191";display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#eaf3ed;color:#1d6b52;font-size:22px;margin-bottom:12px}
+  .dropzone .dz-title{font-size:15px;font-weight:700;color:#253a30;margin:0 0 7px}
+  .dropzone .dz-sub{color:#77847b;font-size:12px;margin:0}
+  .file-chip{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #e9eeeb;border-radius:9px;padding:10px 12px;color:#38483e;font-size:13px;margin-top:14px}
+  .file-chip button{border:0;background:none;color:#87928a;font:inherit;font-size:12px;cursor:pointer}
+  .file-chip button:hover{color:var(--warn)}
+  .required-cols{margin-top:14px;font-size:13px;color:#38483e}
+  .required-cols summary{cursor:pointer;font-weight:700;color:#253a30}
+  .required-cols[open] summary{margin-bottom:10px}
+  .col-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px}
+  .col-list li{border:1px solid #e9eeeb;border-radius:9px;padding:7px 10px;font-size:12px;background:#fbfdfb;color:#34443a}
+  button.btn{border:0;border-radius:9px;font:inherit;font-weight:700;font-size:13px;padding:11px 16px;cursor:pointer;transition:background .15s,transform .15s}
+  button.btn:focus-visible{outline:2px solid #1d6b52;outline-offset:2px}
+  button.btn-primary{background:#1d6b52;color:#fff}
+  button.btn-primary:hover:not(:disabled){background:#15543f;transform:translateY(-1px)}
+  button.btn-primary:disabled{background:#aab8b0;cursor:not-allowed;transform:none;opacity:1}
+  button.btn-quiet{background:#fff;color:#34443a;border:1px solid #c9d3e0}
+  .spinner{display:inline-block;width:13px;height:13px;border:2px solid #ffffff66;border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:8px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .template-link{color:#79857d !important;font-size:12px !important}
+  .template-link button{font:inherit;background:none;border:none;color:#1d6b52;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
+  .error-panel{border:1px solid #f0c8bf;background:#fff2ef;border-radius:9px;padding:11px 13px;margin-top:15px;font-size:13px;line-height:1.5;color:#873b2c}
+  .error-panel .et{font-weight:700;margin:0 0 4px;color:#873b2c}
+  .error-panel p{margin:0;font-size:13px;color:#873b2c;max-width:none}
+  #results{margin-top:22px;padding:0 0 8px}
+  #results hr.rule{display:none}
+  .results-note{margin:28px 2px 13px;font-size:19px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+  .report-tabs{display:flex;gap:8px;margin:0 0 12px;flex-wrap:wrap;border:0}
+  .report-tab{border:1px solid #c9d3e0;background:#fff;color:#334155;padding:8px 16px;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;margin:0}
+  .report-tab:hover{background:#f1f5f9;color:#334155}
+  .report-tab.is-active{background:#1d6b52;border-color:#1d6b52;color:#fff;margin:0}
+  .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px;background:none;border:0;box-shadow:none;overflow:visible}
+  .summary-cell{background:#fff;border:1px solid #e3e8e5;border-radius:16px;box-shadow:0 8px 26px #16332708;padding:17px 18px}
+  .summary-cell .n{font-size:24px;font-weight:750;letter-spacing:-.04em;line-height:1.2;margin:8px 0 0;color:#1b3529;order:2}
+  .summary-cell{display:flex;flex-direction:column}
+  .summary-cell .l{font-size:12px;color:#78847c;order:1}
+  .summary-cell.matched .n{color:#1d6b52}
+  .summary-cell.unmatched .n{color:var(--warn)}
+  .scope-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;margin:0 0 16px;padding:12px 16px;background:#f0f7f3;border:1px solid #dce9e2;border-radius:12px}
+  .scope-row label{font-size:13px;font-weight:700;color:#1e4834}
+  .scope-row select{font:inherit;font-size:13px;color:#182230;background:#fff;border:1px solid #b9ccc1;border-radius:9px;padding:7px 10px;min-width:230px;max-width:100%}
+  .scope-row select:focus-visible{outline:2px solid #1d6b52;outline-offset:2px}
+  .scope-row .scope-hint{font-size:12px;color:#345c48}
+  .recip-wrap{margin:0 0 16px;overflow-x:auto;background:#fff;border:1px solid #e3e8e5;border-radius:16px;box-shadow:0 8px 26px #16332708}
+  .recip-title{font-size:14px;font-weight:700;color:#253a30;margin:0;padding:14px 13px 8px}
+  .recip-title span{font-weight:400;font-size:12px;color:#7b877f;margin-left:8px}
+  table.recip-table{width:100%;border-collapse:collapse;font-size:12px;min-width:640px}
+  table.recip-table th,table.recip-table td{padding:11px 13px;border-bottom:1px solid #edf0ee;text-align:left;white-space:nowrap;color:#34443a}
+  table.recip-table th{background:#f8faf8;color:#67756b;font-weight:700;white-space:normal;vertical-align:bottom}
+  table.recip-table .num{text-align:right;font-variant-numeric:tabular-nums}
+  table.recip-table tbody tr{cursor:pointer}
+  table.recip-table tbody tr:hover{background:#f8faf8}
+  table.recip-table tr.is-total td{font-weight:800;background:#eef5f0;color:#14251f;border-top:2px solid #1d6b52}
+  table.recip-table tr.is-selected td{box-shadow:inset 0 0 0 9999px #f0f7f3}
+  table.recip-table td.is-warn{color:#b3261e;font-weight:700}
+  table.recip-table td.is-ok{color:#1d6b52}
+  table.recip-table tbody tr:last-child td{border-bottom:0}
+  .table-wrap{overflow:auto;margin-bottom:16px}
+  table.summary-full{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;margin:0}
+  table.summary-full caption{text-align:left;font-size:12px;color:#7b877f;padding:13px 13px 4px;caption-side:top}
+  @media (min-width:901px){
+    table.summary-full th:nth-child(1),table.summary-full td:nth-child(1){width:4%}
+    table.summary-full th:nth-child(2),table.summary-full td:nth-child(2){width:11%}
+    table.summary-full th:nth-child(3),table.summary-full td:nth-child(3){width:8%}
+    table.summary-full th:nth-child(4),table.summary-full td:nth-child(4){width:16%}
+    table.summary-full th:nth-child(5),table.summary-full td:nth-child(5),table.summary-full th:nth-child(6),table.summary-full td:nth-child(6){width:6%}
+    table.summary-full th:nth-child(n+7),table.summary-full td:nth-child(n+7){width:8.4%}
+    table.summary-full th:nth-child(12),table.summary-full td:nth-child(12){width:7%;text-align:center;white-space:nowrap}
+  }
+  table.summary-full th,table.summary-full td{text-align:left;padding:11px 13px;border-bottom:1px solid #edf0ee;vertical-align:top;overflow-wrap:anywhere}
+  table.summary-full th{background:#f8faf8;color:#67756b;font-weight:700}
+  table.summary-full td{color:#34443a}
+  table.summary-full td.num,table.summary-full th.num{text-align:right;font-variant-numeric:tabular-nums}
+  table.summary-full tbody tr:last-child td{border-bottom:0}
+  table.summary-full tbody tr:hover{background:#f8faf8}
+  table.summary-full tr.row-input td{color:#67756b;background:#fbfdfb}
+  table.summary-full td.sno,table.summary-full th.sno{text-align:center;color:#7b877f;font-variant-numeric:tabular-nums}
+  table.summary-full tr.row-spacer td{height:22px;padding:0;border-bottom:0;background:#fff}
+  table.summary-full tr.row-spacer:hover{background:#fff}
+  table.summary-full tr.row-difference td{background:#f4f9f6;font-weight:600}
+  table.summary-full tr.row-unmatched td{color:var(--warn)}
+  table.summary-full tr.row-unmatched td:nth-child(-n+4){font-weight:700}
+  @media (max-width:900px){
+    .table-wrap{background:none;border:0;box-shadow:none;overflow:visible}
+    table.summary-full,table.summary-full tbody,table.summary-full tr,table.summary-full td,table.summary-full caption{display:block;width:auto}
+    table.summary-full thead{display:none}
+    table.summary-full tr{background:#fff;border:1px solid #e3e8e5;border-radius:12px;padding:10px 12px;margin-bottom:10px}
+    table.summary-full td{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border:none;padding:4px 0;text-align:right}
+    table.summary-full td::before{content:attr(data-label);color:#7b877f;font-size:11px;text-align:left}
+    table.summary-full caption{padding:0 2px 10px}
+    table.summary-full tr.row-spacer{display:none}
+  }
+  .download-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:18px 22px;background:#fff;border:1px solid #e3e8e5;border-radius:16px;box-shadow:0 8px 26px #16332708}
+  .download-stack{display:grid;gap:12px;margin-top:18px}
+  .download-row .dl-text{flex:1;min-width:200px}
+  .download-row .dl-text .t{font-weight:700;font-size:14px;color:#253a30;margin-bottom:3px}
+  .download-row .dl-text .s{font-size:12px;color:#77847b}
+  .save-status{font-size:12px;color:#2c6842;margin:12px 0 0 !important}
+  .save-status.error{color:var(--warn)}
+  footer.foot{margin-top:28px;padding:0 0 38px;border:0;font-size:12px;line-height:1.6;color:#7b867f;text-align:center}
+  footer.foot p{margin:0 0 6px}
+  @media (max-width:760px){.page{padding:23px 16px 0}.step{padding:18px 16px}.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.summary-grid .summary-cell:last-child{grid-column:1/-1}}
+  .howto{margin:0 0 22px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 26px #16332708}
+  .howto>summary{cursor:pointer;list-style:none;padding:15px 20px;font-weight:700;color:#1e4834;display:flex;align-items:center;gap:10px}
+  .howto>summary::-webkit-details-marker{display:none}
+  .howto>summary::before{content:"\25B8";color:var(--accent);transition:transform .15s}
+  .howto[open]>summary::before{transform:rotate(90deg)}
+  .howto-body{padding:2px 22px 20px;color:#35463c;font-size:14px;line-height:1.6;border-top:1px solid #edf1ee}
+  .howto-body h3{margin:20px 0 6px;font-size:15px;color:#14251f}
+  .howto-body p{margin:6px 0}
+  .howto-body ul,.howto-body ol{margin:6px 0 6px 20px;padding:0}
+  .howto-body li{margin:3px 0}
+  .howto-body code{background:#eef3f0;border-radius:5px;padding:1px 6px;font-size:12.5px}
+  .howto-body table{border-collapse:collapse;width:100%;margin:8px 0;font-size:13px}
+  .howto-body th,.howto-body td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+  .howto-body th{background:var(--accent-tint);color:#1e4834}
+  .howto-body .tip{background:#fff8e6;border:1px solid #f0e0b0;border-radius:10px;padding:9px 12px;margin:10px 0}
+  .xl-btn,.vw-btn{border:0;background:none;cursor:pointer;padding:3px 4px;border-radius:6px;line-height:0}
+  .xl-btn:hover,.vw-btn:hover{background:#e3f1e9}
+  .vw-btn{color:#1d6b52}
+  .xl-btn:disabled,.vw-btn:disabled{opacity:.3;cursor:not-allowed;background:none}
+  table.summary-full td.dl{padding-left:4px;padding-right:4px}
+  .vm-overlay{position:fixed;inset:0;background:rgba(20,35,28,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:2vh 2vw}
+  .vm-overlay[hidden]{display:none}
+  .vm-box{background:#fff;border-radius:16px;width:min(1320px,96vw);max-height:92vh;display:flex;flex-direction:column;box-shadow:0 20px 60px #0004;overflow:hidden}
+  .vm-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:16px 20px 8px}
+  .vm-head h3{margin:0;font-size:17px;color:#1b3529}
+  .vm-head p{margin:4px 0 0;font-size:12px;color:#78847c}
+  .vm-close{border:0;background:none;font-size:26px;line-height:1;cursor:pointer;color:#617064;padding:0 6px}
+  .vm-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:6px 20px 10px}
+  .vm-tabs{display:flex;gap:6px}
+  .vm-tab{border:1px solid #cfd8d2;background:#fff;border-radius:999px;padding:6px 14px;font-size:12px;cursor:pointer;color:#34443a}
+  .vm-tab.on{background:#1d6b52;border-color:#1d6b52;color:#fff}
+  #vmFilter{flex:1;min-width:200px;max-width:380px;padding:8px 12px;border:1px solid #cfd8d2;border-radius:10px;font-size:13px}
+  #vmCount{font-size:12px;color:#78847c}
+  .vm-body{overflow:auto;border-top:1px solid #e3e8e5;border-bottom:1px solid #e3e8e5;flex:1;min-height:120px}
+  #vmTable{border-collapse:collapse;font-size:12px;width:max-content;min-width:100%}
+  #vmTable th{position:sticky;top:0;background:#f1f6f3;color:#4b5d52;text-align:left;padding:9px 12px;border-bottom:1px solid #d7dfda;white-space:nowrap;z-index:1}
+  #vmTable td{padding:8px 12px;border-bottom:1px solid #edf0ee;white-space:nowrap;color:#34443a}
+  #vmTable td.num,#vmTable th.num{text-align:right;font-variant-numeric:tabular-nums}
+  #vmTable tbody tr:hover{background:#f8faf8}
+  .vm-empty{padding:30px;text-align:center;color:#78847c;font-size:13px}
+  .vm-foot{display:flex;justify-content:flex-end;gap:10px;padding:12px 20px}
+  .vm-btn{border:1px solid #cfd8d2;background:#fff;border-radius:10px;padding:9px 16px;font-size:13px;cursor:pointer;color:#34443a}
+  .vm-btn.primary{background:#1d6b52;border-color:#1d6b52;color:#fff;font-weight:600}
+  .template-banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;background:#f0f7f3;border:1px solid #cfe3d8;border-radius:14px;padding:13px 18px;margin:0 0 16px;font-size:14px;color:#253a30}
+  .template-banner span{font-weight:600}
+  .template-banner button{font:inherit;font-weight:700;background:#1d6b52;color:#fff;border:0;border-radius:10px;padding:8px 16px;cursor:pointer}
+  .template-banner button:hover{background:#15543f}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="topline"><span class="mark">ITC</span> GST Compliance Suite</div>
+
+  <header class="hero">
+    <h1>Books &amp; GSTR&#8209;2B Reconciliation Dashboard</h1>
+    <p class="lede">Upload a single workbook containing <strong>Books</strong>, <strong>2B</strong>, and an optional <strong>3B</strong> sheet.</p>
+    <div class="notice"><span aria-hidden="true">●</span><div><strong>Private and local.</strong> All processing is performed in your browser. No file, data, or output is transmitted to or stored on a server.</div></div>
+  </header>
+
+  <details class="howto" id="howto">
+    <summary>How to use this tool (instructions, multiple GSTIN, required columns, outputs)</summary>
+    <div class="howto-body">
+      <h3>Workflow at a glance</h3>
+      <ol>
+        <li><strong>Step 1:</strong> prepare one Excel workbook with sheets named exactly <code>Books</code> and <code>2B</code>, plus an optional <code>3B</code> sheet, and upload it. A blank template can be downloaded from the top of the page, just above Step 1.</li>
+        <li><strong>Step 2:</strong> click <em>Run Reconciliation</em>. Summaries appear below in three tabs: <em>Books &harr; 2B</em>, <em>2B &harr; 3B</em> and <em>Books &harr; 3B</em>.</li>
+        <li>Download the reports using the buttons under Step 2 or under each summary.</li>
+      </ol>
+      <p>Everything runs in your browser and no data is uploaded. The page needs an internet connection only to load its Excel libraries. This version handles <strong>several recipient GSTINs in one workbook</strong>.</p>
+
+      <h3>Preparing the workbook</h3>
+      <p>Keep the column headings exactly as in the template. <strong>Books</strong> and <strong>2B</strong> need these columns:</p>
+      <ul>
+        <li><code>GSTIN of Recipient</code> &ndash; <strong>the first column in all three sheets</strong>. This is <em>your own</em> GSTIN that the invoice belongs to (the registration receiving the ITC). Fill it on every row.</li>
+        <li><code>GSTIN of supplier</code>, <code>Trade/Legal Name</code>, <code>Invoice Number</code>, <code>Invoice Date</code></li>
+        <li><code>Taxable Value (&#8377;)</code>, <code>Integrated Tax(&#8377;)</code>, <code>Central Tax(&#8377;)</code>, <code>State/UT Tax(&#8377;)</code>, <code>Cess(&#8377;)</code></li>
+        <li><code>Month</code> &ndash; the accounting month in Books, the ITC availability period in 2B and the claim month in 3B. Enter it as <strong>DD/MM/YYYY</strong>; it is kept as text in the output.</li>
+      </ul>
+      <p>The optional <strong>3B</strong> sheet uses the same columns plus <code>3B Table 4 Reference</code> and <code>Nature of ITC</code>. Choose Nature of ITC from the dropdown in the template:</p>
+      <ul>
+        <li>ITC on Import of Goods &middot; ITC on Import for Services &middot; ITC on RCM &middot; ITC Through ISD &middot; All Other ITC</li>
+        <li>Reversal of Temporary All Other ITC &middot; Reclaim All Other ITC</li>
+      </ul>
+      <p>Leave the 3B sheet blank if the ITC claimed in 3B is NIL.</p>
+      <div class="tip"><strong>Tips.</strong> Dates can be real Excel dates or text such as <code>05/04/2025</code>. Amounts should be numbers (commas and &#8377; signs are tolerated). Use one row per invoice line; rows with the same recipient GSTIN, supplier GSTIN, invoice number and invoice date are combined automatically before matching. <strong>Use the same spelling of the recipient GSTIN in Books, 2B and 3B</strong>; capitals and spaces are ignored.</div>
+
+      <h3>How matching works</h3>
+      <p>Entries are compared <strong>only within the same GSTIN of Recipient</strong>. Seven passes run in this order, and once matched an entry is not used again.</p>
+      <table>
+        <tr><th>Pass</th><th>What must agree</th></tr>
+        <tr><td>Fully Matched</td><td>Same recipient and supplier GSTIN, invoice number, invoice date and all five amounts</td></tr>
+        <tr><td>Partial Match 1 &ndash; Invoice Number</td><td>Same GSTIN, invoice date and all amounts; the invoice number differs</td></tr>
+        <tr><td>Partial Match 2 &ndash; Invoice Date</td><td>Same GSTIN, invoice number and all amounts; the invoice date differs</td></tr>
+        <tr><td>Partial Match 3 &ndash; Amount</td><td>Same GSTIN, invoice number and date; amounts differ by more than &#8377;1</td></tr>
+        <tr><td>Difference &le; 1 Rupee</td><td>Same invoice number and date, same supplier GSTIN (or same PAN); amounts differ by &#8377;1 or less</td></tr>
+        <tr><td>GSTIN/PAN</td><td>Same invoice number, date and amounts, with a different supplier GSTIN but the same PAN</td></tr>
+        <tr><td>Recipient GSTIN Different</td><td>The only pass that crosses recipients: same supplier GSTIN, invoice number, date and amounts, but booked under a <em>different</em> GSTIN of Recipient. Use it to find invoices posted or claimed under the wrong registration</td></tr>
+      </table>
+      <p>Invoice numbers are compared ignoring capitals, spaces and punctuation (<code>INV-001</code> = <code>inv 001</code>).</p>
+
+      <h3>Reading the results on screen</h3>
+      <ul>
+        <li>Each tab shows a <strong>GSTIN of Recipient</strong> dropdown above the summary. The default is <em>All Recipients</em> (combined); choose one GSTIN to see only its figures. The dropdown is only needed when there are several GSTINs. Downloaded reports always include every GSTIN, whatever is selected.</li>
+        <li>When the workbook has <strong>more than one recipient GSTIN</strong>, a <strong>recipient snapshot</strong> table lists All Recipients and each GSTIN with its entry counts, matched pairs, unmatched counts and taxable and tax differences. The Status column shows <em>Reconciled</em> or <em>Review</em>, so a GSTIN that does not agree stands out. Click a row to select that GSTIN in the summary.</li>
+        <li>In the summary tables, <em>Entries</em> are combined invoices and <em>Rows</em> are the original Excel rows. <em>Unmatched</em> rows are the ones to investigate first.</li>
+      </ul>
+
+      <h3>Reading the downloaded reports</h3>
+      <ul>
+        <li><strong>Books &harr; 2B report</strong> (14 sheets): Summary, Amount Difference, Recipient Snapshot, the consolidated sheet, one sheet per match pass, 2B Mismatched, Book Mismatched and Name Comparison. Every sheet starts with the GSTIN of Recipient column, and the Summary has a block for All Recipients followed by one block per GSTIN.</li>
+        <li><strong>2B &harr; 3B</strong> and <strong>Books &harr; 3B</strong> reports: the same checks between ITC available (2B) or booked (Books) and ITC claimed in 3B.</li>
+        <li><strong>Consolidated Sheet</strong> (Step 2 download): all Books, 2B and 3B entries with their status, the 3B ITC reconciliation (original claim, temporary reversal, reclaim and closing balance), early claims of ITC, and the <strong>Recipient GSTIN Difference</strong> sheet. That sheet shows, for each recipient GSTIN, the Books vs 2B vs 3B difference by amount head, and lists invoices that sit under different recipient GSTINs in different sources.</li>
+        <li><strong>Name Comparison</strong> file: compares supplier names in Books and 2B by GSTIN, to spot name differences.</li>
+      </ul>
+
+      <h3>Suggested review order</h3>
+      <ol>
+        <li>Check the recipient snapshot first: any GSTIN marked <em>Review</em> needs a look before the detail.</li>
+        <li>Review <em>Recipient GSTIN Different</em> matches and the Recipient GSTIN Difference sheet for invoices under the wrong registration.</li>
+        <li>Review <em>2B Mismatched</em> (ITC available but not booked) and <em>Book Mismatched</em> (booked but not in 2B).</li>
+        <li>Review the partial-match sheets for wrong invoice numbers, dates or amounts, then the 3B tabs against what was claimed.</li>
+      </ol>
+
+      <h3>Common problems</h3>
+      <ul>
+        <li><strong>&ldquo;Sheet &hellip; is missing columns&rdquo;</strong> &ndash; a heading was renamed or removed, or the <code>GSTIN of Recipient</code> column is missing. Use the template headings exactly (an older single-GSTIN workbook has no such column and must have it added).</li>
+        <li><strong>&ldquo;Sheet &hellip; is empty&rdquo;</strong> &ndash; the Books or 2B sheet has no rows, or the sheet name is wrong.</li>
+        <li><strong>Many invoices fall in &ldquo;Recipient GSTIN Different&rdquo;, or everything is unmatched</strong> &ndash; the recipient GSTIN is blank or differs between sheets. Fill it consistently on every row.</li>
+        <li><strong>Buttons do nothing / libraries not loaded</strong> &ndash; check the internet connection and reload the page.</li>
+      </ul>
+    </div>
+  </details>
+
+  <div class="template-banner">
+    <span>Need a starting point?</span>
+    <button type="button" id="downloadTemplate">Download the blank workbook template</button>
+  </div>
+
+  <div class="steps">
+
+    <div class="panel step" id="step1">
+      <div class="step-body">
+        <h2><span class="step-num">1</span>Upload Workbook</h2>
+        <p>Provide an .xlsx file with sheets named exactly <strong>Books</strong> and <strong>2B</strong>, plus an optional <strong>3B</strong> sheet. The 3B sheet may be left blank when the ITC claimed in 3B is NIL.</p>
+
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload Excel workbook">
+          <p class="dz-title">Drag and drop your Excel workbook, or click to browse</p>
+          <p class="dz-sub">Books and 2B sheets are required; the 3B sheet is optional or may be NIL</p>
+        </div>
+        <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xltx,.xltm" hidden>
+
+        <div id="fileChip" class="file-chip" hidden>
+          <span id="fileName"></span>
+          <button type="button" id="clearFile">Remove</button>
+        </div>
+
+        <details class="required-cols">
+          <summary>Required columns for Books and 2B</summary>
+          <ul class="col-list" id="colList"></ul>
+        </details>
+        <p class="template-link"><strong>GSTIN of Recipient</strong> is the first column in all three sheets (Books, 2B and 3B). Use it when you hold more than one GSTIN: entries are matched only within the same recipient GSTIN, so an invoice booked under one GSTIN but appearing under another in 2B or 3B is reported as a difference.</p>
+        <p class="template-link"><strong>Month</strong> refers to the accounting month in Books, the ITC availability period in 2B, and the claim month in 3B. Enter it in <strong>DD/MM/YYYY</strong> format; it is retained as text in the output.</p>
+        <p class="template-link">The 3B sheet uses the same columns, plus <strong>3B Table 4 Reference</strong> and <strong>Nature of ITC</strong>. Nature of ITC is selected from a dropdown in the template.</p>
+
+      </div>
+    </div>
+
+    <div class="panel step is-disabled" id="step2">
+      <div class="step-body">
+        <h2><span class="step-num">2</span>Run Reconciliation</h2>
+        <p>Executes seven sequential matching passes — exact match, followed by invoice, date, amount, PAN‑level and recipient‑GSTIN fallbacks — and consolidates repeated invoice entries.</p>
+        <button type="button" class="btn btn-primary" id="runBtn">Run Reconciliation</button>
+        <div class="download-stack" id="primaryDownloads" hidden>
+          <div class="download-row">
+            <div class="dl-text">
+              <div class="t" id="dlTitleConsolidated">ITC_Reconciliation_Consolidated.xlsx</div>
+              <div class="s">Consolidated sheet of all Books, 2B and 3B entries with reconciliation status, plus a GSTIN of Recipient wise difference sheet</div>
+            </div>
+            <button type="button" class="btn btn-primary" id="downloadBtnConsolidated">Download Consolidated Sheet</button>
+          </div>
+          <div class="download-row">
+            <div class="dl-text">
+              <div class="t" id="dlTitleNameComparison">Name_Comparison.xlsx</div>
+              <div class="s">A separate Excel file comparing Books and 2B names by GSTIN</div>
+            </div>
+            <button type="button" class="btn btn-primary" id="downloadBtnNameComparison">Download Name Comparison</button>
+          </div>
+        </div>
+        <p class="save-status" id="saveStatus" hidden></p>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="errorHost"></div>
+
+</div>
+
+<div class="page page-wide">
+  <section id="results" hidden>
+    <hr class="rule">
+    <p class="results-note">Individual Reconciliation Summary Data (Download Option is Below the Summary)</p>
+    <div class="report-tabs" role="tablist" aria-label="Reconciliation reports">
+      <button type="button" class="report-tab is-active" id="tabExisting" role="tab" aria-selected="true" aria-controls="panelExisting">Books ↔ 2B</button>
+      <button type="button" class="report-tab" id="tabTwoBThreeB" role="tab" aria-selected="false" aria-controls="panelTwoBThreeB">2B ↔ 3B</button>
+      <button type="button" class="report-tab" id="tabBooksThreeB" role="tab" aria-selected="false" aria-controls="panelBooksThreeB">Books ↔ 3B</button>
+    </div>
+    <div class="report-panel" id="panelExisting" role="tabpanel" aria-labelledby="tabExisting">
+      <div class="summary-grid" id="summaryGrid"></div>
+      <div class="scope-row" id="scopeRow" hidden><label for="scopeSel">GSTIN of Recipient</label><select id="scopeSel"></select><span class="scope-hint">Showing the combined view by default. Downloaded reports always include every recipient GSTIN.</span></div>
+      <div class="recip-wrap" id="recipWrap" hidden></div>
+      <div class="panel table-wrap"><table class="summary-full" id="summaryTable" aria-live="polite">
+      <caption>Reconciliation Summary — corresponds to the Summary sheet in the downloaded report</caption>
+      <thead>
+        <tr>
+          <th class="sno">S.No.</th>
+          <th>GSTIN of Recipient</th>
+          <th>Category</th>
+          <th>Source / match type</th>
+          <th class="num">Entries</th>
+          <th class="num">Rows</th>
+          <th class="num">Taxable Value</th>
+          <th class="num">IGST</th>
+          <th class="num">CGST</th>
+          <th class="num">SGST/UT</th>
+          <th class="num">Cess</th>
+          <th title="View entries online or download them as Excel">View / Excel</th>
+        </tr>
+      </thead>
+      <tbody id="summaryTableBody"></tbody>
+      </table></div>
+      <div class="download-row">
+      <div class="dl-text">
+        <div class="t" id="dlTitle">Reconciliation_Output.xlsx</div>
+        <div class="s">Contains 14 sheets: summary, recipient snapshot, each match criterion, mismatches, and name comparison</div>
+      </div>
+      <button type="button" class="btn btn-primary" id="downloadBtn">Download Report</button>
+      </div>
+    </div>
+    <div class="report-panel" id="panelTwoBThreeB" role="tabpanel" aria-labelledby="tabTwoBThreeB" hidden>
+      <div class="summary-grid" id="summaryGridTwoBThreeB"></div>
+      <div class="scope-row" id="scopeRowTwoBThreeB" hidden><label for="scopeSelTwoBThreeB">GSTIN of Recipient</label><select id="scopeSelTwoBThreeB"></select><span class="scope-hint">Showing the combined view by default. Downloaded reports always include every recipient GSTIN.</span></div>
+      <div class="recip-wrap" id="recipWrapTwoBThreeB" hidden></div>
+      <div class="panel table-wrap"><table class="summary-full" id="summaryTableTwoBThreeB" aria-live="polite">
+        <caption>Pairwise Summary — ITC available in 2B compared with ITC claimed in 3B</caption>
+        <thead>
+          <tr>
+            <th class="sno">S.No.</th>
+            <th>GSTIN of Recipient</th>
+            <th>Category</th>
+            <th>Source / match type</th>
+            <th class="num">Entries</th>
+            <th class="num">Rows</th>
+            <th class="num">Taxable Value</th>
+            <th class="num">IGST</th>
+            <th class="num">CGST</th>
+            <th class="num">SGST/UT</th>
+            <th class="num">Cess</th>
+          <th title="View entries online or download them as Excel">View / Excel</th>
+          </tr>
+        </thead>
+        <tbody id="summaryTableBodyTwoBThreeB"></tbody>
+      </table></div>
+      <div class="download-row">
+        <div class="dl-text">
+          <div class="t" id="dlTitleTwoBThreeB">2B_3B_Reconciliation_Output.xlsx</div>
+          <div class="s">A separate workbook containing the 2B and 3B reconciliation</div>
+        </div>
+        <button type="button" class="btn btn-primary" id="downloadBtnTwoBThreeB">Download 2B ↔ 3B Report</button>
+      </div>
+    </div>
+    <div class="report-panel" id="panelBooksThreeB" role="tabpanel" aria-labelledby="tabBooksThreeB" hidden>
+      <div class="summary-grid" id="summaryGridBooksThreeB"></div>
+      <div class="scope-row" id="scopeRowBooksThreeB" hidden><label for="scopeSelBooksThreeB">GSTIN of Recipient</label><select id="scopeSelBooksThreeB"></select><span class="scope-hint">Showing the combined view by default. Downloaded reports always include every recipient GSTIN.</span></div>
+      <div class="recip-wrap" id="recipWrapBooksThreeB" hidden></div>
+      <div class="panel table-wrap"><table class="summary-full" id="summaryTableBooksThreeB" aria-live="polite">
+        <caption>Pairwise Summary — Books compared with ITC claimed in 3B</caption>
+        <thead>
+          <tr>
+            <th class="sno">S.No.</th>
+            <th>GSTIN of Recipient</th>
+            <th>Category</th>
+            <th>Source / match type</th>
+            <th class="num">Entries</th>
+            <th class="num">Rows</th>
+            <th class="num">Taxable Value</th>
+            <th class="num">IGST</th>
+            <th class="num">CGST</th>
+            <th class="num">SGST/UT</th>
+            <th class="num">Cess</th>
+          <th title="View entries online or download them as Excel">View / Excel</th>
+          </tr>
+        </thead>
+        <tbody id="summaryTableBodyBooksThreeB"></tbody>
+      </table></div>
+      <div class="download-row">
+        <div class="dl-text">
+          <div class="t" id="dlTitleBooksThreeB">Books_3B_Reconciliation_Output.xlsx</div>
+          <div class="s">A separate workbook containing the Books and 3B reconciliation</div>
+        </div>
+        <button type="button" class="btn btn-primary" id="downloadBtnBooksThreeB">Download Books ↔ 3B Report</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="page">
+  <footer class="foot">
+    <p><strong>Matching methodology:</strong> entries are compared only within the same GSTIN of Recipient; then full match → invoice‑number fallback → invoice‑date fallback → amount fallback (&gt;₹1 difference) → ₹1‑tolerance match → GSTIN/PAN fallback → recipient GSTIN different (same supplier, invoice number, date and amount booked under another recipient GSTIN). Rows sharing a GSTIN, invoice number, and invoice date are consolidated prior to matching.</p>
+    <p><strong>Data privacy:</strong> all processing occurs locally within your browser. No file, data, or output is transmitted to or stored on an external server.</p>
+    <p>© Yatin Bansal. All rights reserved. Use of this tool requires prior written authorization.</p>
+  </footer>
+
+</div>
+
+<script>
+/* =========================================================================
+   Core reconciliation logic — ported 1:1 from the original Python script
+   and cross-checked against it on synthetic data covering every criterion.
+   ========================================================================= */
+const AMOUNT_FIELDS = [
+  "Taxable Value (₹)", "Integrated Tax(₹)", "Central Tax(₹)", "State/UT Tax(₹)", "Cess(₹)",
+];
+const RECIPIENT_FIELD = "GSTIN of Recipient";
+const KEY_FIELDS = ["GSTIN of supplier", "Invoice Number", "Invoice Date"];
+const REQUIRED_FIELDS = [RECIPIENT_FIELD, ...KEY_FIELDS, ...AMOUNT_FIELDS, "Trade/Legal Name"];
+const MONTH_FIELD = "Month";
+const TOLERANCE = 1.0;
+const AMOUNT_EPSILON = 1e-9;
+
+function cleanText(v) { return v === null || v === undefined ? "" : String(v).trim(); }
+function normalizeGstin(v) { return cleanText(v).toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+function normalizeInvoice(v) { return cleanText(v).toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+function normalizeName(v) { return cleanText(v).toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+function panFromGstin(g) { return g.length >= 12 ? g.slice(2, 12) : ""; }
+
+function pad2(n) { return String(n).padStart(2, "0"); }
+function validDate(y, m, d) {
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
+function normalizeDate(value) {
+  if (value === null || value === undefined || value === "") return null;
+  // Excel date cells are tagged as {__date:true,y,m,d} by readSheetRows() below,
+  // using the raw date serial number decoded via XLSX.SSF — never a JS Date
+  // object, because converting Excel's date serial to a JS Date and back out
+  // again is timezone-dependent and silently shifts the day near midnight for
+  // any viewer not in UTC (this previously caused a one-day-back bug for
+  // anyone in a positive UTC offset, e.g. IST).
+  if (typeof value === "object" && value.__date) {
+    return `${value.y}-${pad2(value.m)}-${pad2(value.d)}`;
+  }
+  const text = cleanText(value);
+  let m;
+  if ((m = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))) {
+    const d = +m[1], mo = +m[2], y = +m[3];
+    if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31 && validDate(y, mo, d)) return `${y}-${pad2(mo)}-${pad2(d)}`;
+  }
+  if ((m = text.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/))) {
+    const d = +m[1], mo = +m[2], y = +m[3];
+    if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31 && validDate(y, mo, d)) return `${y}-${pad2(mo)}-${pad2(d)}`;
+  }
+  if ((m = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) {
+    const y = +m[1], mo = +m[2], d = +m[3];
+    if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31 && validDate(y, mo, d)) return `${y}-${pad2(mo)}-${pad2(d)}`;
+  }
+  if ((m = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/))) {
+    const mo = +m[1], d = +m[2], y = +m[3];
+    if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31 && validDate(y, mo, d)) return `${y}-${pad2(mo)}-${pad2(d)}`;
+  }
+  return null;
+}
+// Reads a sheet into an array-of-arrays without ever constructing a JS Date.
+// Date-formatted number cells are decoded straight from the Excel serial via
+// XLSX.SSF (timezone-independent) and tagged {__date:true,y,m,d}; everything
+// else is returned as its raw cell value, matching sheet_to_json's behaviour.
+function readSheetRows(wb, sheetName) {
+  const ws = wb.Sheets[sheetName];
+  if (!ws || !ws["!ref"]) return [];
+  const range = XLSX.utils.decode_range(ws["!ref"]);
+  const date1904 = !!(wb.Workbook && wb.Workbook.WBProps && wb.Workbook.WBProps.date1904);
+  const rows = [];
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    const row = [];
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const cell = ws[XLSX.utils.encode_cell({ r, c })];
+      if (!cell || cell.v === undefined) { row.push(null); continue; }
+      if (cell.t === "n" && cell.z && XLSX.SSF.is_date(cell.z)) {
+        const dc = XLSX.SSF.parse_date_code(cell.v, { date1904 });
+        row.push(dc ? { __date: true, y: dc.y, m: dc.m, d: dc.d } : cell.v);
+      } else {
+        row.push(cell.v);
+      }
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+function dateDisplay(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+function monthDisplay(value) {
+  let iso = normalizeDate(value);
+  if (!iso) {
+    const text = cleanText(value).replace(/\s+/g, " ");
+    const match = text.match(/^([A-Za-z]{3,9})[-\s\/](\d{4})$/) || text.match(/^(\d{1,2})[-\/](\d{4})$/);
+    if (match) {
+      const month = /^[A-Za-z]/.test(match[1])
+        ? ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(match[1].slice(0, 3).toLowerCase()) + 1
+        : Number(match[1]);
+      if (month >= 1 && month <= 12) iso = `${match[2]}-${pad2(month)}-01`;
+    }
+  }
+  if (!iso) return "";
+  const [, month, day] = iso.split("-");
+  return `${day}/${month}/${iso.slice(0, 4)}`;
+}
+function appendUniqueText(existing, value) {
+  const next = cleanText(value);
+  if (!next) return existing || "";
+  const values = existing ? existing.split(", ") : [];
+  if (!values.includes(next)) values.push(next);
+  return values.join(", ");
+}
+function numberVal(value) {
+  if (value === null || value === undefined || value === "") return 0;
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  let s = String(value).replace(/,/g, "").replace(/₹/g, "").trim();
+  const n = Number(s);
+  return Number.isFinite(n) && s !== "" ? n : 0;
+}
+function amountMatch(a, b, tol = AMOUNT_EPSILON) {
+  return AMOUNT_FIELDS.every((f) => Math.abs(a.amounts[f] - b.amounts[f]) <= tol);
+}
+function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
+
+function readRecords(rows, sheetName, options = {}) {
+  if (!rows || rows.length === 0) throw new Error(`Sheet '${sheetName}' is empty`);
+  const headerRow = rows[0];
+  const headers = {};
+  headerRow.forEach((v, i) => { headers[cleanText(v)] = i; });
+  const requiredFields = options.requiredFields || REQUIRED_FIELDS;
+  const missing = requiredFields.filter((f) => !(f in headers));
+  if (missing.length) throw new Error(`Sheet '${sheetName}' is missing columns: ${missing.join(", ")}`);
+
+  const grouped = new Map();
+  for (let i = 1; i < rows.length; i++) {
+    const values = rows[i];
+    const excelRow = i + 1;
+    if (!values || values.every((v) => v === null || v === undefined || v === "")) continue;
+    const gstinDisplay = cleanText(values[headers["GSTIN of supplier"]]);
+    const invoiceDisplay = cleanText(values[headers["Invoice Number"]]);
+    const gstin = normalizeGstin(gstinDisplay);
+    const invoice = normalizeInvoice(invoiceDisplay);
+    const invoiceDate = normalizeDate(values[headers["Invoice Date"]]);
+    const month = headers[MONTH_FIELD] === undefined ? "" : monthDisplay(values[headers[MONTH_FIELD]]);
+    const recipient = normalizeGstin(values[headers[RECIPIENT_FIELD]]);
+    const key = recipient + "\u0001" + gstin + "\u0001" + invoice + "\u0001" + (invoiceDate || "");
+    const natureOfItc = options.natureOfItcField
+      ? cleanText(values[headers[options.natureOfItcField]])
+      : "";
+    const itcStage = natureOfItc === "Reversal of Temporary All Other ITC"
+      ? "reversal"
+      : natureOfItc === "Reclaim All Other ITC"
+        ? "reclaim"
+        : "original";
+    const rowAmounts = Object.fromEntries(AMOUNT_FIELDS.map((f) => [f, numberVal(values[headers[f]])]));
+    const stageAmountsByMonth = Object.fromEntries(["original", "reversal", "reclaim"].map((stage) => [
+      stage,
+      new Map([[month, Object.fromEntries(AMOUNT_FIELDS.map((field) => [
+        field, stage === itcStage ? rowAmounts[field] : 0,
+      ]))]]),
+    ]));
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        source: sheetName, recipient, gstin, pan: panFromGstin(gstin),
+        name: cleanText(values[headers["Trade/Legal Name"]]),
+        invoice, invoiceDisplay, invoiceDate,
+        month,
+        itcType: options.itcTypeField ? cleanText(values[headers[options.itcTypeField]]) : "",
+        natureOfItc,
+        itcStageAmounts: {
+          original: Object.fromEntries(AMOUNT_FIELDS.map((f) => [f, itcStage === "original" ? rowAmounts[f] : 0])),
+          reversal: Object.fromEntries(AMOUNT_FIELDS.map((f) => [f, itcStage === "reversal" ? rowAmounts[f] : 0])),
+          reclaim: Object.fromEntries(AMOUNT_FIELDS.map((f) => [f, itcStage === "reclaim" ? rowAmounts[f] : 0])),
+        },
+        itcStageRowCounts: { original: itcStage === "original" ? 1 : 0, reversal: itcStage === "reversal" ? 1 : 0, reclaim: itcStage === "reclaim" ? 1 : 0 },
+        itcStageMonths: {
+          original: itcStage === "original" ? month : "",
+          reversal: itcStage === "reversal" ? month : "",
+          reclaim: itcStage === "reclaim" ? month : "",
+        },
+        amountsByMonth: new Map([[month, { ...rowAmounts }]]),
+        itcStageAmountsByMonth: stageAmountsByMonth,
+        amounts: rowAmounts,
+        rowCount: 1, originalRows: String(excelRow),
+      });
+    } else {
+      const rec = grouped.get(key);
+      rec.rowCount += 1;
+      rec.originalRows += `, ${excelRow}`;
+      for (const f of AMOUNT_FIELDS) {
+        rec.amounts[f] += rowAmounts[f];
+        rec.itcStageAmounts[itcStage][f] += rowAmounts[f];
+      }
+      rec.itcStageRowCounts[itcStage] += 1;
+      if (!rec.amountsByMonth.has(month)) {
+        rec.amountsByMonth.set(month, Object.fromEntries(AMOUNT_FIELDS.map((field) => [field, 0])));
+        for (const stage of ["original", "reversal", "reclaim"]) {
+          rec.itcStageAmountsByMonth[stage].set(
+            month,
+            Object.fromEntries(AMOUNT_FIELDS.map((field) => [field, 0])),
+          );
+        }
+      }
+      const monthAmounts = rec.amountsByMonth.get(month);
+      const stageMonthAmounts = rec.itcStageAmountsByMonth[itcStage].get(month);
+      for (const field of AMOUNT_FIELDS) {
+        monthAmounts[field] += rowAmounts[field];
+        stageMonthAmounts[field] += rowAmounts[field];
+      }
+      rec.itcStageMonths[itcStage] = appendUniqueText(rec.itcStageMonths[itcStage], month);
+      if (!rec.name) rec.name = cleanText(values[headers["Trade/Legal Name"]]);
+      rec.month = appendUniqueText(rec.month, month);
+      if (options.itcTypeField) {
+        rec.itcType = appendUniqueText(rec.itcType, values[headers[options.itcTypeField]]);
+      }
+      if (options.natureOfItcField) {
+        rec.natureOfItc = appendUniqueText(rec.natureOfItc, values[headers[options.natureOfItcField]]);
+      }
+    }
+
+  }
+  return [...grouped.values()];
+}
+
+const CRITERIA = [
+  "Fully Matched",
+  "Partial Match 1 - Invoice Number",
+  "Partial Match 2 - Invoice Date",
+  "Partial Match 3 - Amount",
+  "Difference <= 1 Rupee",
+  "GSTIN/PAN",
+  "Recipient GSTIN Different",
+];
+
+function matchThreeWay(twoB, books, threeB) {
+  const base = matchRecords(twoB, books);
+  const claimed = matchRecords(twoB, threeB);
+  const baseByTwoB = new Map(base.matches.map((match) => [match.twoB, match]));
+  const threeMatches = [];
+  for (const claimMatch of claimed.matches) {
+    const baseMatch = baseByTwoB.get(claimMatch.twoB);
+    threeMatches.push({
+      criterion: baseMatch ? baseMatch.criterion : "Not matched to Books",
+      claimCriterion: claimMatch.criterion,
+      twoB: claimMatch.twoB,
+      book: baseMatch ? baseMatch.book : null,
+      threeB: claimMatch.book,
+    });
+  }
+  for (const baseMatch of base.matches) {
+    if (!baseByTwoB.has(baseMatch.twoB)) continue;
+    if (threeMatches.some((match) => match.twoB === baseMatch.twoB)) continue;
+    threeMatches.push({ ...baseMatch, claimCriterion: null, threeB: null });
+  }
+  return {
+    matches: threeMatches,
+    unmatched2b: base.unmatched2b,
+    unmatchedBooks: base.unmatchedBooks,
+    unmatched3b: claimed.unmatchedBooks,
+  };
+}
+
+function findCandidate(record, candidates, criterion, removed) {
+  for (const candidate of candidates) {
+    if (removed.has(candidate)) continue;
+    // An invoice booked under one recipient GSTIN is never paired with the same
+    // invoice sitting under a different recipient GSTIN; that is reported as a difference.
+    // The final pass is the only one that pairs entries across different recipient GSTINs.
+    if (criterion === "Recipient GSTIN Different") {
+      if (record.recipient !== candidate.recipient && record.invoice === candidate.invoice &&
+          record.invoiceDate === candidate.invoiceDate && amountMatch(record, candidate)) return candidate;
+      continue;
+    }
+    if (record.recipient !== candidate.recipient) continue;
+    switch (criterion) {
+      case "Fully Matched":
+        if (record.invoice === candidate.invoice && record.invoiceDate === candidate.invoiceDate && amountMatch(record, candidate)) return candidate;
+        break;
+      case "Partial Match 1 - Invoice Number":
+        if (record.invoiceDate === candidate.invoiceDate && amountMatch(record, candidate)) return candidate;
+        break;
+      case "Partial Match 2 - Invoice Date":
+        if (record.invoice === candidate.invoice && amountMatch(record, candidate)) return candidate;
+        break;
+      case "Partial Match 3 - Amount":
+        if (record.invoice === candidate.invoice && record.invoiceDate === candidate.invoiceDate && !amountMatch(record, candidate, TOLERANCE)) return candidate;
+        break;
+      case "Difference <= 1 Rupee":
+        if (record.invoice === candidate.invoice && record.invoiceDate === candidate.invoiceDate &&
+            (record.gstin === candidate.gstin || (record.pan && record.pan === candidate.pan)) &&
+            amountMatch(record, candidate, TOLERANCE) && !amountMatch(record, candidate)) return candidate;
+        break;
+      case "GSTIN/PAN":
+        if (record.pan && record.pan === candidate.pan && record.invoice === candidate.invoice && record.invoiceDate === candidate.invoiceDate && amountMatch(record, candidate)) return candidate;
+        break;
+    }
+  }
+  return null;
+}
+
+function matchRecords(twoB, books) {
+  let unmatched2b = [...twoB];
+  let unmatchedBooks = [...books];
+  const matches = [];
+  for (const criterion of CRITERIA) {
+    const removed = new Set();
+    let byGstin = null;
+    if (criterion !== "GSTIN/PAN" && criterion !== "Difference <= 1 Rupee") {
+      byGstin = new Map();
+      for (const r of unmatchedBooks) {
+        if (!byGstin.has(r.gstin)) byGstin.set(r.gstin, []);
+        byGstin.get(r.gstin).push(r);
+      }
+    }
+    const next2b = [];
+    for (const left of unmatched2b) {
+      const candidates = byGstin ? (byGstin.get(left.gstin) || []) : unmatchedBooks;
+      const right = findCandidate(left, candidates, criterion, removed);
+      if (!right) { next2b.push(left); continue; }
+      removed.add(right);
+      matches.push({ criterion, twoB: left, book: right });
+    }
+    unmatchedBooks = unmatchedBooks.filter((r) => !removed.has(r));
+    unmatched2b = next2b;
+  }
+  return { matches, unmatched2b, unmatchedBooks };
+}
+
+/* =========================================================================
+   Output workbook — mirrors the Python script's sheet layout and styling.
+   ========================================================================= */
+const OUTPUT_HEADERS = [
+  RECIPIENT_FIELD, "Side", "Source", "GSTIN", "PAN", "Trade/Legal Name", "Invoice Number",
+  "Invoice Date", "Month", "Grouped Row Count", "Original Excel Rows", ...AMOUNT_FIELDS,
+];
+const ITC_REFERENCE_FIELD = "3B Table 4 Reference";
+const NATURE_OF_ITC_FIELD = "Nature of ITC";
+const NATURE_OF_ITC_OPTIONS = [
+  "ITC on Import of Goods",
+  "ITC on Import for Services",
+  "ITC on RCM",
+  "ITC Through ISD",
+  "All Other ITC",
+  "Reversal of Temporary All Other ITC",
+  "Reclaim All Other ITC",
+];
+const OUTPUT_HEADERS_3B = [...OUTPUT_HEADERS, ITC_REFERENCE_FIELD, NATURE_OF_ITC_FIELD];
+const HEADER_FILL = { patternType: "solid", fgColor: { rgb: "1F4E78" } };
+const HEADER_FONT = { bold: true, color: { rgb: "FFFFFF" } };
+
+function safeSheetTitle(title) {
+  return title.replace(/[\[\]:*?/\\]/g, "-").slice(0, 31);
+}
+function recordValues(record, prefix) {
+  if (!record) return Array(OUTPUT_HEADERS.length).fill("");
+  return [
+    record.recipient, prefix, record.source, record.gstin, record.pan, record.name,
+    record.invoiceDisplay, dateDisplay(record.invoiceDate), record.month, record.rowCount, record.originalRows,
+    ...AMOUNT_FIELDS.map((f) => round2(record.amounts[f])),
+  ];
+}
+function recordValues3B(record, prefix) {
+  return record
+    ? [...recordValues(record, prefix), record.itcType || "", record.natureOfItc || ""]
+    : Array(OUTPUT_HEADERS_3B.length).fill("");
+}
+function buildSheet(wb, title, aoa) {
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const colCount = aoa[0] ? aoa[0].length : 0;
+  const monthColumns = [];
+  for (let c = 0; c < colCount; c++) {
+    if (String(aoa[0][c] || "").match(/(?:^| - )Month$/)) monthColumns.push(c);
+  }
+  for (const c of monthColumns) {
+    for (let r = 1; r < aoa.length; r++) {
+      const ref = XLSX.utils.encode_cell({ r, c });
+      const value = aoa[r][c];
+      if (value !== null && value !== undefined) {
+        ws[ref] = { t: "s", v: String(value), z: "@", s: { numFmt: "@" } };
+      }
+    }
+  }
+  const widths = [];
+  for (let c = 0; c < colCount; c++) {
+    let max = 0;
+    for (const row of aoa) {
+      const s = row[c] === null || row[c] === undefined ? "" : String(row[c]);
+      if (s.length > max) max = s.length;
+    }
+    widths.push(Math.min(Math.max(max + 2, 12), 32));
+  }
+  ws["!cols"] = widths.map((w) => ({ wch: w }));
+  if (aoa.length && colCount) {
+    ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: aoa.length - 1, c: colCount - 1 } }) };
+  }
+  ws["!freeze"] = { xSplit: 0, ySplit: 1, topLeftCell: "A2", activePane: "bottomLeft", state: "frozen" };
+  for (let c = 0; c < colCount; c++) {
+    const ref = XLSX.utils.encode_cell({ r: 0, c });
+    if (ws[ref]) ws[ref].s = { font: HEADER_FONT, fill: HEADER_FILL };
+  }
+  const safe = safeSheetTitle(title);
+  XLSX.utils.book_append_sheet(wb, ws, safe);
+  return safe;
+}
+
+function addSummarySheetLinks(wb, ws, summaryRows, sheetByCriterion, mismatchSheets) {
+  summaryRows.forEach((row, index) => {
+    if (index === 0 || !row || row.length < 3 || !ws) return;
+    let target = null;
+    if (row[1] === "Matched") {
+      const criterion = String(row[2]).replace(/ - (?:2B|Books|3B)$/, "");
+      target = sheetByCriterion[criterion];
+    } else if (row[1] === "Partial Match") {
+      target = mismatchSheets[row[2]];
+    } else if (row[1] === "Unmatched") {
+      target = mismatchSheets[row[2]];
+    }
+    if (!target || !wb.SheetNames.includes(target)) return;
+    const cell = ws[XLSX.utils.encode_cell({ r: index, c: 2 })];
+    if (!cell) return;
+    cell.l = { Target: `#'${target.replace(/'/g, "''")}'!A1`, Tooltip: `Open ${target}` };
+    cell.s = {
+      ...(cell.s || {}),
+      font: { color: { rgb: "0563C1" }, underline: "single" },
+    };
+  });
+}
+
+function summaryRowValues(row) {
+  return [
+    row.recipient || "",
+    row.category,
+    row.source,
+    row.count,
+    row.rows,
+    ...AMOUNT_FIELDS.map((field) => round2(row.amounts[field])),
+  ];
+}
+function summaryGroupKey(row, labels) {
+  if (row.category === "Matched") {
+    const suffix = new RegExp(` - (?:${labels.join("|")})$`);
+    return `${row.category}|${row.source.replace(suffix, "")}`;
+  }
+  if (row.category === "Input" || row.category === "Unmatched") return row.category;
+  return `${row.category}|${row.source}`;
+}
+function summaryDifferenceRow(previous, current, previousLabel, currentLabel) {
+  return {
+    category: "Difference",
+    source: `${currentLabel} - ${previousLabel}`,
+    count: "",
+    rows: "",
+    amounts: Object.fromEntries(AMOUNT_FIELDS.map((field) => [
+      field, round2(current.amounts[field] - previous.amounts[field]),
+    ])),
+  };
+}
+function rowsWithDifferences(rows, labels) {
+  const output = [];
+  const differences = [];
+  let index = 0;
+  while (index < rows.length) {
+    const key = summaryGroupKey(rows[index], labels);
+    const group = [];
+    while (index < rows.length && summaryGroupKey(rows[index], labels) === key) {
+      group.push(rows[index++]);
+    }
+    group.forEach((row) => output.push(row));
+    for (let i = 1; i < group.length; i++) {
+      const difference = summaryDifferenceRow(
+        group[i - 1],
+        group[i],
+        labels[i - 1] || "Previous",
+        labels[i] || "Current",
+      );
+      output.push(difference);
+      differences.push(difference);
+    }
+  }
+  const actualDifference = differences[0];
+  const totals = (items) => ({
+    count: "",
+    rows: "",
+    amounts: Object.fromEntries(AMOUNT_FIELDS.map((field) => [
+      field, round2(items.reduce((total, row) => total + row.amounts[field], 0)),
+    ])),
+  });
+  const grandTotal = totals(differences.slice(1));
+  const netDifference = {
+    category: "Net Difference",
+    source: "Grand total less actual difference",
+    count: "",
+    rows: "",
+    amounts: Object.fromEntries(AMOUNT_FIELDS.map((field) => [
+      field, round2(grandTotal.amounts[field] - (actualDifference ? actualDifference.amounts[field] : 0)),
+    ])),
+  };
+  output.push({});
+  output.push({
+    category: "Grand Total",
+    source: "All differences except actual difference",
+    ...grandTotal,
+  });
+  output.push(netDifference);
+  return output;
+}
+
+const ALL_RECIPIENTS_LABEL = "All Recipients";
+const SUMMARY_HEADERS = [RECIPIENT_FIELD, "Category", "Source / Match Type", "Grouped Entries", "Original Rows", ...AMOUNT_FIELDS];
+function recipientLabel(value) { return value || "(Blank)"; }
+function collectRecipients(...lists) {
+  const found = new Set();
+  for (const list of lists) for (const record of list) if (record) found.add(record.recipient);
+  return [...found].sort();
+}
+// One recipient => just that GSTIN. Several => "All Recipients" first, then one block per GSTIN.
+function recipientScopes(recipients) {
+  if (recipients.length > 1) return [null, ...recipients];
+  return recipients.length ? recipients : [null];
+}
+function onlyRecipient(list, recipient) {
+  return recipient === null ? list : list.filter((record) => record.recipient === recipient);
+}
+const MATCH_SIDES = ["twoB", "book", "threeB", "left", "right"];
+// For a recipient scope, a match is kept if any side belongs to it; sides that sit under
+// another recipient GSTIN are blanked so each block only totals its own GSTIN's entries.
+function onlyMatches(list, recipient) {
+  if (recipient === null) return list;
+  const out = [];
+  for (const match of list) {
+    if (!MATCH_SIDES.some((k) => match[k] && match[k].recipient === recipient)) continue;
+    const copy = { ...match };
+    for (const k of MATCH_SIDES) if (copy[k] && copy[k].recipient !== recipient) copy[k] = null;
+    out.push(copy);
+  }
+  return out;
+}
+function scopedSummaryRows(recipients, build) {
+  const out = [];
+  recipientScopes(recipients).forEach((recipient, index) => {
+    if (index > 0) out.push({}, {}, {});
+    const label = recipient === null ? ALL_RECIPIENTS_LABEL : recipientLabel(recipient);
+    for (const row of build(recipient)) out.push(row.category ? { ...row, recipient: label } : { ...row });
+  });
+  return out;
+}
+
+function buildNameComparisonRows(twoB, books) {
+  const byGstin = new Map();
+  function addName(side, record) {
+    if (!record.gstin) return;
+    if (!byGstin.has(record.gstin)) byGstin.set(record.gstin, { "2B": new Set(), Book: new Set() });
+    byGstin.get(record.gstin)[side].add(record.name);
+  }
+  for (const record of twoB) addName("2B", record);
+  for (const record of books) addName("Book", record);
+  const rows = [["GSTIN", "PAN", "2B Names", "Book Names", "Name Difference"]];
+  for (const gstin of [...byGstin.keys()].sort()) {
+    const names = byGstin.get(gstin);
+    const twoBNames = [...names["2B"]].filter(Boolean).sort();
+    const bookNames = [...names.Book].filter(Boolean).sort();
+    const twoBNorm = new Set(twoBNames.map(normalizeName));
+    const bookNorm = new Set(bookNames.map(normalizeName));
+    const same = twoBNorm.size === bookNorm.size && [...twoBNorm].every((name) => bookNorm.has(name));
+    rows.push([gstin, panFromGstin(gstin), twoBNames.join(" | "), bookNames.join(" | "), same ? "No" : "Yes"]);
+  }
+  return rows;
+}
+
+// Shared by both the exported Summary sheet and the on-page results table,
+// so the two can never drift out of sync.
+function computeSummaryRows(twoB, books, matches, unmatched2b, unmatchedBooks) {
+  function totals(records) {
+    records = records.filter(Boolean);
+    const t = {};
+    for (const f of AMOUNT_FIELDS) t[f] = 0;
+    let rows = 0;
+    for (const r of records) { rows += r.rowCount; for (const f of AMOUNT_FIELDS) t[f] += r.amounts[f]; }
+    return { count: records.length, rows, amounts: t };
+  }
+  function row(category, source, records) {
+    const { count, rows, amounts } = totals(records);
+    return { category, source, count, rows, amounts };
+  }
+  const out = [];
+  out.push(row("Input", "2B", twoB));
+  out.push(row("Input", "Books", books));
+  for (const criterion of CRITERIA) {
+    const cm = matches.filter((m) => m.criterion === criterion);
+    out.push(row("Matched", `${criterion} - 2B`, cm.map((m) => m.twoB)));
+    out.push(row("Matched", `${criterion} - Books`, cm.map((m) => m.book)));
+  }
+  out.push(row("Unmatched", "2B", unmatched2b));
+  out.push(row("Unmatched", "Books", unmatchedBooks));
+  return out;
+}
+
+function amountTotals(records) {
+  const totals = Object.fromEntries(AMOUNT_FIELDS.map((field) => [field, 0]));
+  for (const record of records) {
+    for (const field of AMOUNT_FIELDS) totals[field] += record.amounts[field];
+  }
+  return totals;
+}
+function amountDifferenceRows(leftLabel, leftRecords, rightLabel, rightRecords) {
+  const rows = [[RECIPIENT_FIELD, "Amount Field", leftLabel, rightLabel, `Difference (${rightLabel} - ${leftLabel})`, "Absolute Difference"]];
+  const recipients = collectRecipients(leftRecords, rightRecords);
+  for (const recipient of recipientScopes(recipients)) {
+    const leftTotals = amountTotals(onlyRecipient(leftRecords, recipient));
+    const rightTotals = amountTotals(onlyRecipient(rightRecords, recipient));
+    const label = recipient === null ? ALL_RECIPIENTS_LABEL : recipientLabel(recipient);
+    for (const field of AMOUNT_FIELDS) {
+      const difference = round2(rightTotals[field] - leftTotals[field]);
+      rows.push([label, field, round2(leftTotals[field]), round2(rightTotals[field]), difference, Math.abs(difference)]);
+    }
+  }
+  return rows;
+}
+
+// One row per recipient GSTIN (plus "All Recipients" when there are several). Shared by the
+// on-page snapshot table and the "Recipient Snapshot" sheet so both always show the same numbers.
+function computeRecipientSnapshot(spec) {
+  const { leftLabel, rightLabel, left, right, matches, unmatchedLeft, unmatchedRight } = spec;
+  const recipients = collectRecipients(left, right);
+  const taxOf = (t) => AMOUNT_FIELDS.slice(1).reduce((sum, f) => sum + t[f], 0);
+  const headers = [
+    RECIPIENT_FIELD, `${leftLabel} Entries`, `${rightLabel} Entries`, "Matched Pairs",
+    `Unmatched in ${leftLabel}`, `Unmatched in ${rightLabel}`,
+    `Taxable Diff (${rightLabel} − ${leftLabel})`, `Tax Diff (${rightLabel} − ${leftLabel})`, "Status",
+  ];
+  const scopes = recipients.length > 1 ? [null, ...recipients] : recipients;
+  const rows = scopes.map((rec) => {
+    const l = onlyRecipient(left, rec), r = onlyRecipient(right, rec);
+    const lt = amountTotals(l), rt = amountTotals(r);
+    const ul = onlyRecipient(unmatchedLeft, rec).length, ur = onlyRecipient(unmatchedRight, rec).length;
+    const taxableDiff = round2(rt[AMOUNT_FIELDS[0]] - lt[AMOUNT_FIELDS[0]]);
+    const taxDiff = round2(taxOf(rt) - taxOf(lt));
+    const clean = ul === 0 && ur === 0 && Math.abs(taxableDiff) < 0.005 && Math.abs(taxDiff) < 0.005;
+    return {
+      rec, clean, taxableDiff, taxDiff, ul, ur,
+      values: [
+        rec === null ? ALL_RECIPIENTS_LABEL : recipientLabel(rec), l.length, r.length,
+        onlyMatches(matches, rec).length, ul, ur, taxableDiff, taxDiff,
+        clean ? "✓ Reconciled" : "⚠ Review",
+      ],
+    };
+  });
+  return { headers, rows, recipients };
+}
+
+function buildRecipientSnapshotSheet(wb, spec) {
+  const snap = computeRecipientSnapshot(spec);
+  const aoa = [snap.headers, ...snap.rows.map((row) => row.values)];
+  if (!snap.rows.length) aoa.push(["No records found", "", "", "", "", "", "", "", ""]);
+  const name = buildSheet(wb, "Recipient Snapshot", aoa);
+  const ws = wb.Sheets[name];
+  snap.rows.forEach((row, i) => {
+    for (const c of [6, 7]) {
+      const ref = XLSX.utils.encode_cell({ r: i + 1, c });
+      if (ws[ref]) ws[ref].z = "#,##0.00;[Red]-#,##0.00";
+    }
+    const statusRef = XLSX.utils.encode_cell({ r: i + 1, c: 8 });
+    if (ws[statusRef] && !row.clean) ws[statusRef].s = { font: { bold: true, color: { rgb: "B3261E" } } };
+    if (row.rec === null) {
+      for (let c = 0; c < snap.headers.length; c++) {
+        const ref = XLSX.utils.encode_cell({ r: i + 1, c });
+        if (ws[ref]) ws[ref].s = { ...(ws[ref].s || {}), font: { ...((ws[ref].s || {}).font || {}), bold: true } };
+      }
+    }
+  });
+  ws["!cols"] = snap.headers.map((h, c) => ({ wch: c === 0 ? 30 : Math.max(h.length + 2, 16) }));
+  return name;
+}
+
+function buildOutputWorkbook(twoB, books, matches, unmatched2b, unmatchedBooks) {
+  const wb = XLSX.utils.book_new();
+  const matchHeaders = ["Match Criterion", ...OUTPUT_HEADERS.map((h) => `2B - ${h}`), ...OUTPUT_HEADERS.map((h) => `Book - ${h}`)];
+
+  function matchSheetAOA(rows) {
+    return [matchHeaders, ...rows.map((item) => [item.criterion, ...recordValues(item.twoB, "2B"), ...recordValues(item.book, "Book")])];
+  }
+  const consolidatedName = buildSheet(wb, "Consolidated", matchSheetAOA(matches));
+  const criterionNames = {};
+  for (const criterion of CRITERIA) {
+    criterionNames[criterion] = buildSheet(wb, criterion, matchSheetAOA(matches.filter((m) => m.criterion === criterion)));
+  }
+  const twoBMisName = buildSheet(wb, "2B Mismatched", [OUTPUT_HEADERS, ...unmatched2b.map((r) => recordValues(r, "2B"))]);
+  const bookMisName = buildSheet(wb, "Book Mismatched", [OUTPUT_HEADERS, ...unmatchedBooks.map((r) => recordValues(r, "Book"))]);
+
+  buildSheet(wb, "Name Comparison", buildNameComparisonRows(twoB, books));
+
+  // Summary sheet
+  const summaryRows = [SUMMARY_HEADERS];
+  let previousCriterion = null;
+  let unmatchedSectionStarted = false;
+  let currentScope = null;
+  for (const r of scopedSummaryRows(collectRecipients(twoB, books), (rec) => rowsWithDifferences(
+    computeSummaryRows(onlyRecipient(twoB, rec), onlyRecipient(books, rec), onlyMatches(matches, rec), onlyRecipient(unmatched2b, rec), onlyRecipient(unmatchedBooks, rec)),
+    ["2B", "Books"],
+  ))) {
+    if (!r.category) {
+      summaryRows.push([]);
+      continue;
+    }
+    if (r.recipient !== currentScope) { currentScope = r.recipient; previousCriterion = null; unmatchedSectionStarted = false; }
+    const criterion = r.category === "Matched" ? r.source.replace(/ - (?:2B|Books)$/, "") : null;
+    if (criterion && criterion !== previousCriterion) summaryRows.push([], []);
+    if (criterion) previousCriterion = criterion;
+    if (r.category === "Unmatched" && !unmatchedSectionStarted) {
+      summaryRows.push([], []);
+      unmatchedSectionStarted = true;
+    }
+    summaryRows.push(summaryRowValues(r));
+  }
+  buildSheet(wb, "Amount Difference", amountDifferenceRows("2B", twoB, "Books", books));
+  buildRecipientSnapshotSheet(wb, {
+    leftLabel: "2B", rightLabel: "Books", left: twoB, right: books, matches,
+    unmatchedLeft: unmatched2b, unmatchedRight: unmatchedBooks,
+  });
+  summaryRows.push([]);
+  summaryRows.push(["", "Note", "Amounts are based on grouped entries; Original Rows reflects the number of source rows. Entries are matched only within the same GSTIN of Recipient."]);
+  buildSheet(wb, "Summary", summaryRows);
+  addSummarySheetLinks(wb, wb.Sheets["Summary"], summaryRows, criterionNames, {
+    "2B": twoBMisName,
+    "Books": bookMisName,
+  });
+
+  // Reorder: Summary first, then Consolidated, criteria, mismatches, name comparison
+  const order = ["Summary", "Amount Difference", "Recipient Snapshot", consolidatedName, ...CRITERIA.map((c) => criterionNames[c]), twoBMisName, bookMisName, "Name Comparison"];
+  wb.SheetNames = order.filter((n) => wb.SheetNames.includes(n));
+
+  return wb;
+}
+
+function pairRecordValues(record, label) {
+  if (!record) return Array(OUTPUT_HEADERS.length).fill("");
+  return [
+    record.recipient, label, record.source, record.gstin, record.pan, record.name,
+    record.invoiceDisplay, dateDisplay(record.invoiceDate), record.month, record.rowCount, record.originalRows,
+    ...AMOUNT_FIELDS.map((f) => round2(record.amounts[f])),
+  ];
+}
+function pairRecordValues3B(record, label) {
+  return record
+    ? [...pairRecordValues(record, label), record.itcType || "", record.natureOfItc || ""]
+    : Array(OUTPUT_HEADERS_3B.length).fill("");
+}
+
+function computePairSummaryRows(leftLabel, leftRecords, rightLabel, rightRecords, matches, unmatchedLeft, unmatchedRight) {
+  const totals = (records) => {
+    records = records.filter(Boolean);
+    const amounts = Object.fromEntries(AMOUNT_FIELDS.map((f) => [f, 0]));
+    let rows = 0;
+    for (const record of records) {
+      rows += record.rowCount;
+      for (const field of AMOUNT_FIELDS) amounts[field] += record.amounts[field];
+    }
+    return { count: records.length, rows, amounts };
+  };
+  const row = (category, source, records) => ({ category, source, ...totals(records) });
+  const out = [row("Input", leftLabel, leftRecords), row("Input", rightLabel, rightRecords)];
+  for (const criterion of CRITERIA) {
+    const criterionMatches = matches.filter((m) => m.criterion === criterion);
+    out.push(row("Matched", `${criterion} - ${leftLabel}`, criterionMatches.map((m) => m.left)));
+    out.push(row("Matched", `${criterion} - ${rightLabel}`, criterionMatches.map((m) => m.right)));
+  }
+  out.push(row("Unmatched", leftLabel, unmatchedLeft));
+  out.push(row("Unmatched", rightLabel, unmatchedRight));
+  return out;
+}
+
+function buildPairOutputWorkbook(leftLabel, leftRecords, rightLabel, rightRecords, matches, unmatchedLeft, unmatchedRight) {
+  const has3B = leftLabel === "3B" || rightLabel === "3B";
+  const wb = XLSX.utils.book_new();
+  const valueFor = (record, label) => has3B && label === "3B"
+    ? pairRecordValues3B(record, label)
+    : pairRecordValues(record, label);
+  const headersFor = (label) => has3B && label === "3B" ? OUTPUT_HEADERS_3B : OUTPUT_HEADERS;
+  const matchHeaders = [
+    "Match Criterion",
+    ...headersFor(leftLabel).map((h) => `${leftLabel} - ${h}`),
+    ...headersFor(rightLabel).map((h) => `${rightLabel} - ${h}`),
+  ];
+  const matchSheetRows = (rows) => [
+    matchHeaders,
+    ...rows.map((m) => [m.criterion, ...valueFor(m.left, leftLabel), ...valueFor(m.right, rightLabel)]),
+  ];
+  const consolidatedName = buildSheet(wb, "Consolidated", matchSheetRows(matches));
+  const criterionNames = {};
+  for (const criterion of CRITERIA) {
+    criterionNames[criterion] = buildSheet(wb, criterion, matchSheetRows(matches.filter((m) => m.criterion === criterion)));
+  }
+  const leftMismatchName = buildSheet(wb, `${leftLabel} Mismatched`, [
+    headersFor(leftLabel), ...unmatchedLeft.map((r) => valueFor(r, leftLabel)),
+  ]);
+  const rightMismatchName = buildSheet(wb, `${rightLabel} Mismatched`, [
+    headersFor(rightLabel), ...unmatchedRight.map((r) => valueFor(r, rightLabel)),
+  ]);
+  const summaryRows = [SUMMARY_HEADERS];
+  let previousCriterion = null;
+  let unmatchedSectionStarted = false;
+  let currentScope = null;
+  for (const r of scopedSummaryRows(collectRecipients(leftRecords, rightRecords), (rec) => rowsWithDifferences(
+    computePairSummaryRows(
+      leftLabel, onlyRecipient(leftRecords, rec), rightLabel, onlyRecipient(rightRecords, rec),
+      onlyMatches(matches, rec), onlyRecipient(unmatchedLeft, rec), onlyRecipient(unmatchedRight, rec),
+    ),
+    [leftLabel, rightLabel],
+  ))) {
+    if (!r.category) {
+      summaryRows.push([]);
+      continue;
+    }
+    if (r.recipient !== currentScope) { currentScope = r.recipient; previousCriterion = null; unmatchedSectionStarted = false; }
+    const criterion = r.category === "Matched" ? r.source.replace(new RegExp(` - (?:${leftLabel}|${rightLabel})$`), "") : null;
+    if (criterion && criterion !== previousCriterion) summaryRows.push([], []);
+    if (criterion) previousCriterion = criterion;
+    if (r.category === "Unmatched" && !unmatchedSectionStarted) {
+      summaryRows.push([], []);
+      unmatchedSectionStarted = true;
+    }
+    summaryRows.push(summaryRowValues(r));
+  }
+  buildSheet(wb, "Amount Difference", amountDifferenceRows(leftLabel, leftRecords, rightLabel, rightRecords));
+  buildRecipientSnapshotSheet(wb, {
+    leftLabel, rightLabel, left: leftRecords, right: rightRecords, matches,
+    unmatchedLeft, unmatchedRight,
+  });
+  buildSheet(wb, "Summary", summaryRows);
+  addSummarySheetLinks(wb, wb.Sheets["Summary"], summaryRows, criterionNames, {
+    [leftLabel]: leftMismatchName,
+    [rightLabel]: rightMismatchName,
+  });
+  wb.SheetNames = [
+    "Summary", "Amount Difference", "Recipient Snapshot", consolidatedName, ...CRITERIA.map((c) => criterionNames[c]),
+    leftMismatchName, rightMismatchName,
+  ].filter((n) => wb.SheetNames.includes(n));
+  return wb;
+}
+
+function computeThreeWaySummaryRows(twoB, books, threeB, matches, unmatched2b, unmatchedBooks, unmatched3b) {
+  const rowsFor = (records) => {
+    const amounts = Object.fromEntries(AMOUNT_FIELDS.map((f) => [f, 0]));
+    let rows = 0;
+    for (const r of records.filter(Boolean)) {
+      rows += r.rowCount;
+      for (const f of AMOUNT_FIELDS) amounts[f] += r.amounts[f];
+    }
+    return { count: records.filter(Boolean).length, rows, amounts };
+  };
+  const row = (category, source, records) => ({ category, source, ...rowsFor(records) });
+  const out = [row("Input", "2B", twoB), row("Input", "Books", books), row("Input", "3B", threeB)];
+  for (const criterion of CRITERIA) {
+    const cm = matches.filter((m) => m.criterion === criterion && m.claimCriterion === criterion);
+    out.push(row("Matched", `${criterion} - 2B`, cm.map((m) => m.twoB)));
+    out.push(row("Matched", `${criterion} - Books`, cm.map((m) => m.book)));
+    out.push(row("Matched", `${criterion} - 3B`, cm.map((m) => m.threeB).filter(Boolean)));
+  }
+  const partial = matches.filter((m) => m.threeB && !(m.criterion === "Fully Matched" && m.claimCriterion === "Fully Matched"));
+  out.push(row("Partial Match", "2B / Books / 3B", partial.flatMap((m) => m.threeB ? [m.twoB, m.book, m.threeB] : [])));
+  out.push(row("Unmatched", "2B", unmatched2b));
+  out.push(row("Unmatched", "Books", unmatchedBooks));
+  out.push(row("Unmatched", "3B", unmatched3b));
+  return out;
+}
+
+function computeThreeWayVarianceRows(twoB, books, threeB) {
+  const totals = (records) => {
+    const amounts = Object.fromEntries(AMOUNT_FIELDS.map((f) => [f, 0]));
+    for (const record of records) {
+      for (const field of AMOUNT_FIELDS) amounts[field] += record.amounts[field];
+    }
+    return amounts;
+  };
+  const bookAmounts = totals(books);
+  const twoBAmounts = totals(twoB);
+  const threeBAmounts = totals(threeB);
+  return AMOUNT_FIELDS.map((field) => [
+    field,
+    round2(bookAmounts[field]),
+    round2(twoBAmounts[field]),
+    round2(threeBAmounts[field]),
+    round2(twoBAmounts[field] - bookAmounts[field]),
+    round2(threeBAmounts[field] - twoBAmounts[field]),
+    round2(threeBAmounts[field] - bookAmounts[field]),
+  ]);
+}
+
+function buildThreeWayOutputWorkbook(twoB, books, threeB, matches, unmatched2b, unmatchedBooks, unmatched3b) {
+  const wb = XLSX.utils.book_new();
+  const matchHeaders = [
+    "Book ↔ 2B Match Criterion", "2B ↔ 3B Match Criterion",
+    ...OUTPUT_HEADERS.map((h) => `Book - ${h}`),
+    ...OUTPUT_HEADERS.map((h) => `2B - ${h}`),
+    ...OUTPUT_HEADERS_3B.map((h) => `3B - ${h}`),
+  ];
+  const matchRows = matches.map((m) => [
+    m.criterion, m.claimCriterion || "",
+    ...recordValues(m.book, "Book"), ...recordValues(m.twoB, "2B"), ...recordValues3B(m.threeB, "3B"),
+  ]);
+  const matchAoa = [matchHeaders, ...matchRows];
+  const consolidatedName = buildSheet(wb, "Consolidated", matchAoa);
+  const criterionNames = {};
+  for (const criterion of CRITERIA) {
+    criterionNames[criterion] = buildSheet(wb, criterion, [
+      matchHeaders,
+      ...matches.filter((m) => m.criterion === criterion).map((m) => [
+        m.criterion, m.claimCriterion || "",
+        ...recordValues(m.book, "Book"), ...recordValues(m.twoB, "2B"), ...recordValues3B(m.threeB, "3B"),
+      ]),
+    ]);
+  }
+  buildSheet(wb, "2B Mismatched", [OUTPUT_HEADERS, ...unmatched2b.map((r) => recordValues(r, "2B"))]);
+  buildSheet(wb, "Book Mismatched", [OUTPUT_HEADERS, ...unmatchedBooks.map((r) => recordValues(r, "Book"))]);
+  buildSheet(wb, "3B Mismatched", [OUTPUT_HEADERS_3B, ...unmatched3b.map((r) => recordValues3B(r, "3B"))]);
+  const partialMatches = matches.filter((m) =>
+    m.threeB && !(m.criterion === "Fully Matched" && m.claimCriterion === "Fully Matched"),
+  );
+  const partialHeaders = [
+    "Book ↔ 2B Match Criterion", "2B ↔ 3B Match Criterion",
+    ...OUTPUT_HEADERS.map((h) => `Book - ${h}`),
+    ...OUTPUT_HEADERS.map((h) => `2B - ${h}`),
+    ...OUTPUT_HEADERS_3B.map((h) => `3B - ${h}`),
+  ];
+  buildSheet(wb, "Partial Matches", [
+    partialHeaders,
+    ...partialMatches.map((m) => [
+      m.criterion, m.claimCriterion || "",
+      ...recordValues(m.book, "Book"), ...recordValues(m.twoB, "2B"), ...recordValues3B(m.threeB, "3B"),
+    ]),
+  ]);
+
+  const summaryRows = [SUMMARY_HEADERS];
+  for (const r of scopedSummaryRows(collectRecipients(twoB, books), (rec) => rowsWithDifferences(
+    computeSummaryRows(onlyRecipient(twoB, rec), onlyRecipient(books, rec), onlyMatches(matches, rec), onlyRecipient(unmatched2b, rec), onlyRecipient(unmatchedBooks, rec)),
+    ["2B", "Books"],
+  ))) {
+    if (!r.category) {
+      summaryRows.push([]);
+      continue;
+    }
+    if (r.category === "Matched" && r.source.startsWith("Fully Matched")) summaryRows.push([], []);
+    summaryRows.push(summaryRowValues(r));
+  }
+  buildSheet(wb, "Summary", summaryRows);
+  const detailedRows = [SUMMARY_HEADERS];
+  for (const r of scopedSummaryRows(collectRecipients(twoB, books, threeB), (rec) => rowsWithDifferences(
+    computeThreeWaySummaryRows(
+      onlyRecipient(twoB, rec), onlyRecipient(books, rec), onlyRecipient(threeB, rec), onlyMatches(matches, rec),
+      onlyRecipient(unmatched2b, rec), onlyRecipient(unmatchedBooks, rec), onlyRecipient(unmatched3b, rec),
+    ),
+    ["2B", "Books", "3B"],
+  ))) {
+    if (!r.category) {
+      detailedRows.push([]);
+      continue;
+    }
+    detailedRows.push(summaryRowValues(r));
+  }
+  buildSheet(wb, "Three-Way Detail", detailedRows);
+  addSummarySheetLinks(wb, wb.Sheets["Summary"], summaryRows, criterionNames, {
+    "2B": "2B Mismatched",
+    "Books": "Book Mismatched",
+  });
+  addSummarySheetLinks(wb, wb.Sheets["Three-Way Detail"], detailedRows, criterionNames, {
+    "2B": "2B Mismatched",
+    "Books": "Book Mismatched",
+    "3B": "3B Mismatched",
+    "2B / Books / 3B": "Partial Matches",
+  });
+
+  const varianceRows = [
+    [RECIPIENT_FIELD, "Measure", "Books", "2B", "3B", "2B - Books", "3B - 2B", "3B - Books"],
+    ...recipientScopes(collectRecipients(twoB, books, threeB)).flatMap((rec) => computeThreeWayVarianceRows(
+      onlyRecipient(twoB, rec), onlyRecipient(books, rec), onlyRecipient(threeB, rec),
+    ).map((row) => [rec === null ? ALL_RECIPIENTS_LABEL : recipientLabel(rec), ...row])),
+    [],
+    ["Interpretation", "Positive variance means the later source has a higher amount than the earlier source."],
+  ];
+  buildSheet(wb, "Three-Way Summary", varianceRows);
+
+  const order = [
+    "Summary", "Three-Way Summary", "Three-Way Detail", consolidatedName,
+    ...CRITERIA.map((c) => criterionNames[c]), "Partial Matches",
+    "2B Mismatched", "Book Mismatched", "3B Mismatched",
+  ];
+  wb.SheetNames = order.filter((n) => wb.SheetNames.includes(n));
+  return wb;
+}
+
+function buildThreeBItcReconciliationSheet(wb, threeB) {
+  const stages = [
+    { key: "original", label: "Original ITC Claimed" },
+    { key: "reversal", label: "Temporary Reversal" },
+    { key: "reclaim", label: "Reclaim ITC" },
+    { key: "closing", label: "Closing Balance of Temporary Reversal" },
+  ];
+  const amountHeaders = stages.flatMap((stage) =>
+    AMOUNT_FIELDS.map((field) => `${stage.label} - ${field}`),
+  );
+  const headers = [
+    RECIPIENT_FIELD, "GSTIN", "PAN", "Trade/Legal Name", "Invoice Number", "Invoice Date",
+    "Original ITC Claimed - Month", "Temporary Reversal - Month", "Reclaim ITC - Month",
+    "3B Entries", ...amountHeaders,
+  ];
+  const emptyAmounts = () => Object.fromEntries(AMOUNT_FIELDS.map((field) => [field, 0]));
+  const emptyStage = () => ({ entries: 0, amounts: emptyAmounts() });
+  const byInvoice = new Map();
+  const invoiceKey = (record) => [
+    record.recipient, record.gstin, record.invoice, record.invoiceDate || "",
+  ].join("\u0001");
+  for (const record of threeB) {
+    const key = invoiceKey(record);
+    if (!byInvoice.has(key)) {
+      byInvoice.set(key, {
+        record,
+        stages: Object.fromEntries(stages.map((stage) => [stage.key, emptyStage()])),
+      });
+    }
+    const item = byInvoice.get(key);
+    for (const stage of stages.slice(0, 3)) {
+      const stageData = item.stages[stage.key];
+      stageData.entries += record.itcStageRowCounts[stage.key];
+      for (const field of AMOUNT_FIELDS) {
+        const stageAmount = record.itcStageAmounts[stage.key][field];
+        stageData.amounts[field] += stage.key === "reversal" ? Math.abs(stageAmount) : stageAmount;
+      }
+    }
+  }
+
+  const rows = [...byInvoice.values()]
+    .filter(({ stages: data }) => data.reversal.entries || data.reclaim.entries)
+    .sort((left, right) => {
+      const leftRecord = left.record;
+      const rightRecord = right.record;
+      return `${leftRecord.month}|${leftRecord.invoiceDisplay}`.localeCompare(
+        `${rightRecord.month}|${rightRecord.invoiceDisplay}`,
+      );
+    })
+    .map(({ record, stages: data }) => {
+      const closing = emptyStage();
+      closing.entries = data.reversal.entries;
+      for (const field of AMOUNT_FIELDS) {
+        closing.amounts[field] = data.reversal.amounts[field] - data.reclaim.amounts[field];
+      }
+      const values = [
+        record.recipient,
+        record.gstin,
+        record.pan,
+        record.name,
+        record.invoiceDisplay,
+        dateDisplay(record.invoiceDate),
+        record.itcStageMonths.original,
+        record.itcStageMonths.reversal,
+        record.itcStageMonths.reclaim,
+        data.original.entries + data.reversal.entries + data.reclaim.entries,
+      ];
+      for (const stage of stages.slice(0, 3)) {
+        values.push(...AMOUNT_FIELDS.map((field) => round2(data[stage.key].amounts[field])));
+      }
+      values.push(...AMOUNT_FIELDS.map((field) => round2(closing.amounts[field])));
+      return values;
+    });
+
+  buildSheet(wb, "Reversal and Reclaim ITC", [
+    headers,
+    ...rows,
+    [],
+    ["Calculation", "Closing Balance of Temporary Reversal = Temporary Reversal - Reclaim ITC"],
+  ]);
+}
+
+function monthOrdinal(value) {
+  const text = cleanText(value);
+  const date = normalizeDate(text);
+  if (date) {
+    const [, year, month] = date.match(/^(\d{4})-(\d{2})-\d{2}$/) || [];
+    if (year && month) return Number(year) * 12 + Number(month) - 1;
+  }
+  const namedMonth = text.match(/^([A-Za-z]{3,9})[-\s/](\d{2,4})$/);
+  if (namedMonth) {
+    const month = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+      .indexOf(namedMonth[1].slice(0, 3).toLowerCase());
+    let year = Number(namedMonth[2]);
+    if (namedMonth[2].length === 2) year += year >= 70 ? 1900 : 2000;
+    if (month >= 0) return year * 12 + month;
+  }
+  return null;
+}
+
+function monthValues(value) {
+  return [...new Set(cleanText(value).split(/\s*,\s*/).filter(Boolean))];
+}
+
+function buildEarlyClaimOfItcSheet(wb, threeWayMatches) {
+  const sourceColumns = (label) => [
+    `${label} Matched Month(s)`,
+    `${label} Early Claim By (Months)`,
+    ...AMOUNT_FIELDS.map((field) => `${label} - ${field}`),
+  ];
+  const headers = [
+    RECIPIENT_FIELD, "GSTIN", "PAN", "Trade/Legal Name", "Invoice Number", "Invoice Date",
+    "3B Table 4 Reference", "Nature of ITC", "3B Claim Month",
+    ...AMOUNT_FIELDS.map((field) => `3B Original ITC Claimed - ${field}`),
+    ...sourceColumns("Books"),
+    ...sourceColumns("2B"),
+  ];
+  const rows = [];
+
+  function earlySourceValues(source, claimOrdinal) {
+    if (!source) return ["", "", ...AMOUNT_FIELDS.map(() => "")];
+    const earlyMonths = monthValues(source.month)
+      .map((month) => ({ month, ordinal: monthOrdinal(month) }))
+      .filter((item) => item.ordinal !== null && claimOrdinal < item.ordinal);
+    if (!earlyMonths.length) return ["", "", ...AMOUNT_FIELDS.map(() => "")];
+
+    const totals = Object.fromEntries(AMOUNT_FIELDS.map((field) => [field, 0]));
+    for (const { month } of earlyMonths) {
+      const monthlyAmounts = source.amountsByMonth.get(month);
+      if (monthlyAmounts) {
+        for (const field of AMOUNT_FIELDS) totals[field] += monthlyAmounts[field];
+      }
+    }
+    return [
+      earlyMonths.map((item) => item.month).join(", "),
+      earlyMonths.map((item) => item.ordinal - claimOrdinal).join(", "),
+      ...AMOUNT_FIELDS.map((field) => round2(totals[field])),
+    ];
+  }
+
+  for (const match of threeWayMatches) {
+    const claim = match.threeB;
+    if (!claim || !claim.itcStageRowCounts.original) continue;
+    const claimMonths = monthValues(claim.itcStageMonths.original);
+    for (const claimMonth of claimMonths) {
+      const claimOrdinal = monthOrdinal(claimMonth);
+      const claimAmounts = claim.itcStageAmountsByMonth.original.get(claimMonth);
+      if (claimOrdinal === null || !claimAmounts) continue;
+      const booksValues = earlySourceValues(match.book, claimOrdinal);
+      const twoBValues = earlySourceValues(match.twoB, claimOrdinal);
+      const hasEarlySource = Boolean(booksValues[0] || twoBValues[0]);
+      if (!hasEarlySource) continue;
+      rows.push({
+        sort: [claimOrdinal, claim.invoiceDisplay, claim.gstin, claim.recipient].join("|"),
+        values: [
+          claim.recipient, claim.gstin, claim.pan, claim.name, claim.invoiceDisplay,
+          dateDisplay(claim.invoiceDate), claim.itcType, claim.natureOfItc,
+          claimMonth,
+          ...AMOUNT_FIELDS.map((field) => round2(claimAmounts[field])),
+          ...booksValues,
+          ...twoBValues,
+        ],
+      });
+    }
+  }
+
+  rows.sort((left, right) => left.sort.localeCompare(right.sort));
+  buildSheet(wb, "Early Claim of ITC", [
+    headers,
+    ...rows.map((row) => row.values),
+    [],
+    ["Interpretation", "Each invoice row shows the 3B original claim alongside later matching Books and 2B months and amounts."],
+  ]);
+}
+
+function buildRecipientDifferenceSheet(wb, books, twoB, threeB) {
+  const EPS = 0.005;
+  const sumBy = (records) => amountTotals(records);
+  const headers = [RECIPIENT_FIELD, "Measure", "Books", "2B", "3B", "2B - Books", "3B - 2B", "3B - Books"];
+  const rows = [];
+  for (const recipient of collectRecipients(books, twoB, threeB)) {
+    const b = sumBy(onlyRecipient(books, recipient));
+    const t = sumBy(onlyRecipient(twoB, recipient));
+    const c = sumBy(onlyRecipient(threeB, recipient));
+    const block = AMOUNT_FIELDS.map((field) => [
+      recipientLabel(recipient), field,
+      round2(b[field]), round2(t[field]), round2(c[field]),
+      round2(t[field] - b[field]), round2(c[field] - t[field]), round2(c[field] - b[field]),
+    ]);
+    if (block.some((row) => row.slice(5).some((v) => Math.abs(v) > EPS))) rows.push(...block);
+  }
+  const aoa = [headers];
+  if (rows.length) aoa.push(...rows);
+  else aoa.push(["No difference found between Books, 2B and 3B for any GSTIN of Recipient", "", "", "", "", "", "", ""]);
+  const table1End = aoa.length - 1;
+
+  // Second table: the same invoice sitting under different recipient GSTINs in different sources.
+  const groups = new Map();
+  const totalTax = (rec) => AMOUNT_FIELDS.slice(1).reduce((sum, f) => sum + rec.amounts[f], 0);
+  for (const [label, list] of [["Books", books], ["2B", twoB], ["3B", threeB]]) {
+    for (const rec of list) {
+      const key = [rec.gstin, rec.invoice, rec.invoiceDate || ""].join("\u0001");
+      if (!groups.has(key)) groups.set(key, { rec, sources: {} });
+      const g = groups.get(key);
+      if (!g.sources[label]) g.sources[label] = { recipients: new Set(), taxable: 0, tax: 0 };
+      const src = g.sources[label];
+      src.recipients.add(recipientLabel(rec.recipient));
+      src.taxable += rec.amounts[AMOUNT_FIELDS[0]];
+      src.tax += totalTax(rec);
+    }
+  }
+  const detail = [];
+  for (const { rec, sources } of groups.values()) {
+    const present = Object.values(sources);
+    if (present.length < 2) continue;
+    const signature = (src) => [...src.recipients].sort().join("|");
+    if (new Set(present.map(signature)).size < 2) continue;
+    const cellsFor = (label) => sources[label]
+      ? [[...sources[label].recipients].sort().join(", "), round2(sources[label].taxable), round2(sources[label].tax)]
+      : ["Not available", "", ""];
+    const b = cellsFor("Books"), t = cellsFor("2B"), c = cellsFor("3B");
+    detail.push([
+      rec.gstin, rec.name, rec.invoiceDisplay, dateDisplay(rec.invoiceDate),
+      b[0], t[0], c[0], b[1], b[2], t[1], t[2], c[1], c[2],
+    ]);
+  }
+  detail.sort((x, y) => `${x[0]}|${x[2]}`.localeCompare(`${y[0]}|${y[2]}`));
+  const detailHeaders = [
+    "Supplier GSTIN", "Trade/Legal Name", "Invoice Number", "Invoice Date",
+    `Books - ${RECIPIENT_FIELD}`, `2B - ${RECIPIENT_FIELD}`, `3B - ${RECIPIENT_FIELD}`,
+    "Books - Taxable Value (₹)", "Books - Total Tax (₹)",
+    "2B - Taxable Value (₹)", "2B - Total Tax (₹)",
+    "3B - Taxable Value (₹)", "3B - Total Tax (₹)",
+  ];
+  aoa.push([]);
+  aoa.push(["Invoices found under a different GSTIN of Recipient in different sources"]);
+  const detailHeaderRow = aoa.length;
+  aoa.push(detailHeaders);
+  if (detail.length) aoa.push(...detail);
+  else aoa.push(["None"]);
+
+  const name = buildSheet(wb, "Recipient GSTIN Difference", aoa);
+  const ws = wb.Sheets[name];
+  ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: table1End, c: headers.length - 1 } }) };
+  detailHeaders.forEach((_, c) => {
+    const ref = XLSX.utils.encode_cell({ r: detailHeaderRow, c });
+    if (ws[ref]) ws[ref].s = { font: HEADER_FONT, fill: HEADER_FILL };
+  });
+  const titleRef = XLSX.utils.encode_cell({ r: detailHeaderRow - 1, c: 0 });
+  if (ws[titleRef]) ws[titleRef].s = { font: { bold: true } };
+  ws["!cols"] = detailHeaders.map((h, c) => ({ wch: c === 0 ? 30 : Math.min(Math.max(h.length + 2, 16), 36) }));
+  return name;
+}
+
+/* =========================================================================
+   Consolidated workbook add-ons: per-type Summary sheets and month-wise
+   reconciliation sheets (styled for accountants, scoped by recipient GSTIN).
+   ========================================================================= */
+const ACC_NUM_FMT = '#,##0.00;[Red]-#,##0.00;"-"';
+const ACC_INT_FMT = '#,##0;[Red]-#,##0;"-"';
+const ACC_THIN = { style: "thin", color: { rgb: "BFBFBF" } };
+const ACC_BORDER = { top: ACC_THIN, bottom: ACC_THIN, left: ACC_THIN, right: ACC_THIN };
+const FIELD_SHORT = ["Taxable Value (₹)", "IGST (₹)", "CGST (₹)", "SGST/UT (₹)", "Cess (₹)"];
+
+function accCell(v, o = {}) {
+  const isNum = typeof v === "number";
+  const cell = { v: v === null || v === undefined ? "" : v, t: isNum ? "n" : "s" };
+  if (isNum) cell.z = o.int ? ACC_INT_FMT : ACC_NUM_FMT;
+  cell.s = {
+    border: ACC_BORDER,
+    alignment: { vertical: "center", horizontal: o.align || (isNum ? "right" : "left"), wrapText: !!o.wrap },
+    font: { bold: !!o.bold, sz: o.sz || 11, color: { rgb: o.color || "000000" } },
+  };
+  if (o.fill) cell.s.fill = { patternType: "solid", fgColor: { rgb: o.fill } };
+  return cell;
+}
+function accCount(v, o = {}) { return accCell(v, { align: "center", int: true, ...o }); }
+function accSheet(wb, title, rows, widths, merges, freezeRows) {
+  const ws = {};
+  let maxC = 0;
+  rows.forEach((row, r) => row.forEach((cell, c) => {
+    if (!cell) return;
+    ws[XLSX.utils.encode_cell({ r, c })] = cell;
+    if (c > maxC) maxC = c;
+  }));
+  ws["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(rows.length - 1, 0), c: maxC } });
+  ws["!cols"] = widths.map((w) => ({ wch: w }));
+  if (merges.length) ws["!merges"] = merges;
+  if (freezeRows) ws["!freeze"] = { xSplit: 0, ySplit: freezeRows, topLeftCell: `A${freezeRows + 1}`, activePane: "bottomLeft", state: "frozen" };
+  const safe = safeSheetTitle(title);
+  XLSX.utils.book_append_sheet(wb, ws, safe);
+  return safe;
+}
+function accBanner(rows, merges, width, text, o) {
+  const row = Array(width).fill(null);
+  row[0] = accCell(text, o);
+  for (let c = 1; c < width; c++) row[c] = accCell("", { fill: o.fill });
+  merges.push({ s: { r: rows.length, c: 0 }, e: { r: rows.length, c: width - 1 } });
+  rows.push(row);
+}
+
+function buildPairSummarySheet(wb, def) {
+  const { leftLabel, rightLabel } = def;
+  const n = SUMMARY_HEADERS.length;
+  const rows = [], merges = [];
+  accBanner(rows, merges, n, `Reconciliation Summary - ${leftLabel} vs ${rightLabel}`, { bold: true, sz: 14, color: "FFFFFF", fill: "1F4E78" });
+  accBanner(rows, merges, n, `Same figures as the Summary sheet of the individual output file, with the combined view first and then one block per GSTIN of Recipient. Amounts are on grouped entries; Original Rows = number of source rows. Difference = ${rightLabel} - ${leftLabel}.`, { color: "595959", fill: "F2F2F2", wrap: true });
+  rows.push([]);
+  rows.push(SUMMARY_HEADERS.map((h) => accCell(h, { bold: true, color: "FFFFFF", fill: "2F75B5", align: "center", wrap: true })));
+  const fills = { Input: "EDEDED", Matched: "FFFFFF", Difference: "E2EFDA", Unmatched: "FCE4D6", "Grand Total": "DDEBF7", "Net Difference": "BDD7EE" };
+  let prevCriterion = null, unmatchedStarted = false, currentScope = null;
+  for (const r of scopedSummaryRows(collectRecipients(def.left, def.right), (rec) => rowsWithDifferences(
+    computePairSummaryRows(
+      leftLabel, onlyRecipient(def.left, rec), rightLabel, onlyRecipient(def.right, rec),
+      onlyMatches(def.matches, rec), onlyRecipient(def.unL, rec), onlyRecipient(def.unR, rec),
+    ),
+    [leftLabel, rightLabel],
+  ))) {
+    if (!r.category) { rows.push([]); continue; }
+    if (r.recipient !== currentScope) { currentScope = r.recipient; prevCriterion = null; unmatchedStarted = false; }
+    const criterion = r.category === "Matched" ? r.source.replace(new RegExp(` - (?:${leftLabel}|${rightLabel})$`), "") : null;
+    if (criterion && criterion !== prevCriterion) rows.push([]);
+    if (criterion) prevCriterion = criterion;
+    if (r.category === "Unmatched" && !unmatchedStarted) { rows.push([]); unmatchedStarted = true; }
+    const bold = ["Difference", "Grand Total", "Net Difference"].includes(r.category);
+    const o = { bold, fill: fills[r.category] };
+    rows.push(summaryRowValues(r).map((v, i) => (i === 3 || i === 4)
+      ? accCount(v === "" ? "" : Number(v), o)
+      : accCell(v, o)));
+  }
+  accSheet(wb, `Summary ${leftLabel} vs ${rightLabel}`, rows, [30, 16, 46, 14, 14, 20, 20, 20, 20, 20], merges, 4);
+}
+
+function monthTotalsMap(records) {
+  const out = new Map();
+  for (const rec of records) {
+    if (!rec) continue;
+    for (const [month, amounts] of rec.amountsByMonth) {
+      if (!out.has(month)) out.set(month, { __n: 0, ...Object.fromEntries(AMOUNT_FIELDS.map((f) => [f, 0])) });
+      const t = out.get(month);
+      t.__n += 1;
+      for (const f of AMOUNT_FIELDS) t[f] += amounts[f];
+    }
+  }
+  return out;
+}
+function compareMonths(a, b) {
+  const x = monthOrdinal(a), y = monthOrdinal(b);
+  if (x === null && y === null) return String(a).localeCompare(String(b));
+  if (x === null) return 1;
+  if (y === null) return -1;
+  return x - y;
+}
+
+function buildPairMonthwiseSheet(wb, def) {
+  const { leftLabel, rightLabel } = def;
+  const n = 4 + AMOUNT_FIELDS.length * 3;
+  const rows = [], merges = [];
+  accBanner(rows, merges, n, `Month-wise Reconciliation - ${leftLabel} vs ${rightLabel}`, { bold: true, sz: 14, color: "FFFFFF", fill: "1F4E78" });
+  accBanner(rows, merges, n, `Each block shows month-wise entries and totals of value and tax heads on the ${leftLabel} side and the ${rightLabel} side, with Difference = ${rightLabel} - ${leftLabel}. Months are taken from each side's own Month column. No. of Entries counts grouped invoice entries; an entry with amounts in more than one month is counted in each of those months, so the Total row shows the unique entry count (as in the Summary sheet) and may be lower than the sum of the months. Where several recipient GSTINs exist, the combined view comes first, followed by one section per GSTIN of Recipient.`, { color: "595959", fill: "F2F2F2", wrap: true });
+  rows.push([]);
+
+  const block = (title, fill, leftRecs, rightRecs, note) => {
+    const L = monthTotalsMap(leftRecs), R = monthTotalsMap(rightRecs);
+    const months = [...new Set([...L.keys(), ...R.keys()])].sort(compareMonths);
+    accBanner(rows, merges, n, title + (note ? `   (${note})` : ""), { bold: true, sz: 12, color: "FFFFFF", fill });
+    const h1 = [accCell("Month", { bold: true, fill: "DDEBF7", align: "center" })];
+    const h2 = [accCell("", { fill: "DDEBF7" })];
+    merges.push({ s: { r: rows.length, c: 0 }, e: { r: rows.length + 1, c: 0 } });
+    const subHead = () => [
+      accCell(leftLabel, { bold: true, fill: "EDEDED", align: "center" }),
+      accCell(rightLabel, { bold: true, fill: "EDEDED", align: "center" }),
+      accCell("Difference", { bold: true, fill: "FFF2CC", align: "center" }),
+    ];
+    h1.push(accCell("No. of Entries", { bold: true, fill: "DDEBF7", align: "center" }), accCell("", { fill: "DDEBF7" }), accCell("", { fill: "DDEBF7" }));
+    merges.push({ s: { r: rows.length, c: 1 }, e: { r: rows.length, c: 3 } });
+    h2.push(...subHead());
+    AMOUNT_FIELDS.forEach((f, i) => {
+      h1.push(accCell(FIELD_SHORT[i], { bold: true, fill: "DDEBF7", align: "center" }), accCell("", { fill: "DDEBF7" }), accCell("", { fill: "DDEBF7" }));
+      merges.push({ s: { r: rows.length, c: 4 + i * 3 }, e: { r: rows.length, c: 6 + i * 3 } });
+      h2.push(...subHead());
+    });
+    rows.push(h1, h2);
+    const total = AMOUNT_FIELDS.map(() => [0, 0]);
+    const zero = { __n: 0, ...Object.fromEntries(AMOUNT_FIELDS.map((f) => [f, 0])) };
+    for (const month of months) {
+      const l = L.get(month) || zero, r = R.get(month) || zero;
+      const row = [accCell(month || "(No month)", { bold: true })];
+      row.push(accCount(l.__n), accCount(r.__n), accCount(r.__n - l.__n, { fill: "FFF9E5" }));
+      AMOUNT_FIELDS.forEach((f, i) => {
+        total[i][0] += l[f]; total[i][1] += r[f];
+        row.push(accCell(round2(l[f])), accCell(round2(r[f])), accCell(round2(r[f] - l[f]), { fill: "FFF9E5" }));
+      });
+      rows.push(row);
+    }
+    if (!months.length) rows.push([accCell("No entries", { color: "7F7F7F" }), ...Array(n - 1).fill(null).map(() => accCell(""))]);
+    const t = [accCell("Total", { bold: true, fill: "BDD7EE" })];
+    const nl = leftRecs.filter(Boolean).length, nr = rightRecs.filter(Boolean).length;
+    t.push(accCount(nl, { bold: true, fill: "BDD7EE" }), accCount(nr, { bold: true, fill: "BDD7EE" }), accCount(nr - nl, { bold: true, fill: "FFE699" }));
+    total.forEach(([l, r]) => t.push(
+      accCell(round2(l), { bold: true, fill: "BDD7EE" }), accCell(round2(r), { bold: true, fill: "BDD7EE" }),
+      accCell(round2(r - l), { bold: true, fill: "FFE699" }),
+    ));
+    rows.push(t, []);
+  };
+
+  const recipients = collectRecipients(def.left, def.right);
+  for (const rec of recipientScopes(recipients)) {
+    const left = onlyRecipient(def.left, rec), right = onlyRecipient(def.right, rec);
+    const matches = onlyMatches(def.matches, rec);
+    const unL = onlyRecipient(def.unL, rec), unR = onlyRecipient(def.unR, rec);
+    if (recipients.length > 1 || rec !== null) {
+      accBanner(rows, merges, n, `${RECIPIENT_FIELD}: ${rec === null ? ALL_RECIPIENTS_LABEL + ` (${recipients.length} GSTINs)` : recipientLabel(rec)}`, { bold: true, sz: 13, color: "FFFFFF", fill: "0B3D2E" });
+      rows.push([]);
+    }
+    block("1. Input - all entries before matching", "404040", left, right);
+    const matchedLeft = [], matchedRight = [];
+    CRITERIA.forEach((criterion, i) => {
+      const cm = matches.filter((m) => m.criterion === criterion);
+      cm.forEach((m) => { matchedLeft.push(m.left); matchedRight.push(m.right); });
+      block(`${i + 2}. ${criterion}`, "2F75B5", cm.map((m) => m.left), cm.map((m) => m.right), `${cm.length} matched pair(s)`);
+    });
+    block(`${CRITERIA.length + 2}. Total Matched - all criteria`, "1D6B52", matchedLeft, matchedRight);
+    block(`${CRITERIA.length + 3}. Unmatched`, "C55A11", unL, unR, "entries are not paired, so differences are not meaningful");
+    rows.push([]);
+  }
+  const widths = [24, 11, 11, 12, ...AMOUNT_FIELDS.flatMap(() => [16, 16, 16])];
+  accSheet(wb, `Monthwise ${leftLabel} vs ${rightLabel}`, rows, widths, merges, 0);
+}
+
+function buildConsolidatedOutputWorkbook(twoB, books, threeB, threeWayMatches, booksThreeBResult, pairDefs) {
+  const wb = XLSX.utils.book_new();
+  for (const def of pairDefs || []) buildPairSummarySheet(wb, def);
+  for (const def of pairDefs || []) buildPairMonthwiseSheet(wb, def);
+  const headers = [
+    "Books ↔ 2B Match Criterion", "2B ↔ 3B Match Criterion", "Books ↔ 3B Match Criterion",
+    ...OUTPUT_HEADERS.map((h) => `Books - ${h}`),
+    ...OUTPUT_HEADERS.map((h) => `2B - ${h}`),
+    ...OUTPUT_HEADERS_3B.map((h) => `3B - ${h}`),
+  ];
+  const blankBook = Array(OUTPUT_HEADERS.length).fill("");
+  const blank2B = Array(OUTPUT_HEADERS.length).fill("");
+  const blank3B = Array(OUTPUT_HEADERS_3B.length).fill("");
+  const rows = [];
+  const used = { Books: new Set(), "2B": new Set(), "3B": new Set() };
+  const booksThreeBPair = new Map(
+    ((booksThreeBResult && booksThreeBResult.matches) || []).map((m) => [m.twoB, m]),
+  );
+  const booksThreeBCriterion = (book, threeBRecord) => {
+    if (!book || !threeBRecord) return "";
+    const pair = booksThreeBPair.get(book);
+    return pair && pair.book === threeBRecord ? pair.criterion : "Unmatched";
+  };
+  const addMatch = (match) => {
+    if (match.book) used.Books.add(match.book);
+    if (match.twoB) used["2B"].add(match.twoB);
+    if (match.threeB) used["3B"].add(match.threeB);
+    rows.push([
+      match.criterion || "Unmatched", match.claimCriterion || "", booksThreeBCriterion(match.book, match.threeB),
+      ...recordValues(match.book, "Books"), ...recordValues(match.twoB, "2B"), ...recordValues3B(match.threeB, "3B"),
+    ]);
+  };
+  threeWayMatches.forEach(addMatch);
+  for (const record of books) {
+    if (!used.Books.has(record)) rows.push(["Unmatched", "", "", ...recordValues(record, "Books"), ...blank2B, ...blank3B]);
+  }
+  for (const record of twoB) {
+    if (!used["2B"].has(record)) rows.push(["Unmatched", "", "", ...blankBook, ...recordValues(record, "2B"), ...blank3B]);
+  }
+  for (const record of threeB) {
+    if (!used["3B"].has(record)) rows.push(["Unmatched", "", "", ...blankBook, ...blank2B, ...recordValues3B(record, "3B")]);
+  }
+  buildSheet(wb, "Consolidated", [headers, ...rows]);
+  buildRecipientDifferenceSheet(wb, books, twoB, threeB);
+  buildEarlyClaimOfItcSheet(wb, threeWayMatches);
+  buildThreeBItcReconciliationSheet(wb, threeB);
+  return wb;
+}
+
+/* =========================================================================
+   UI wiring
+   ========================================================================= */
+const fmt = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+function money(n) { return "₹" + fmt.format(n); }
+
+const dropzone = document.getElementById("dropzone");
+const fileInput = document.getElementById("fileInput");
+const fileChip = document.getElementById("fileChip");
+const fileName = document.getElementById("fileName");
+const clearFileBtn = document.getElementById("clearFile");
+const step2 = document.getElementById("step2");
+const runBtn = document.getElementById("runBtn");
+const errorHost = document.getElementById("errorHost");
+const resultsEl = document.getElementById("results");
+const primaryDownloads = document.getElementById("primaryDownloads");
+const summaryGrid = document.getElementById("summaryGrid");
+const summaryTableBody = document.getElementById("summaryTableBody");
+const downloadBtn = document.getElementById("downloadBtn");
+const dlTitle = document.getElementById("dlTitle");
+const pairReportUi = {
+  twoBThreeB: {
+    grid: document.getElementById("summaryGridTwoBThreeB"),
+    body: document.getElementById("summaryTableBodyTwoBThreeB"),
+    button: document.getElementById("downloadBtnTwoBThreeB"),
+    title: document.getElementById("dlTitleTwoBThreeB"),
+  },
+  booksThreeB: {
+    grid: document.getElementById("summaryGridBooksThreeB"),
+    body: document.getElementById("summaryTableBodyBooksThreeB"),
+    button: document.getElementById("downloadBtnBooksThreeB"),
+    title: document.getElementById("dlTitleBooksThreeB"),
+  },
+};
+const tabExisting = document.getElementById("tabExisting");
+const panelExisting = document.getElementById("panelExisting");
+const saveStatus = document.getElementById("saveStatus");
+const downloadBtnConsolidated = document.getElementById("downloadBtnConsolidated");
+const dlTitleConsolidated = document.getElementById("dlTitleConsolidated");
+const downloadBtnNameComparison = document.getElementById("downloadBtnNameComparison");
+const dlTitleNameComparison = document.getElementById("dlTitleNameComparison");
+const colList = document.getElementById("colList");
+const downloadTemplateBtn = document.getElementById("downloadTemplate");
+
+REQUIRED_FIELDS.forEach((f) => {
+  const li = document.createElement("li");
+  li.textContent = f;
+  colList.appendChild(li);
+});
+
+let selectedFile = null;
+let outputBlob = null;
+let outputName = "Reconciliation_Output.xlsx";
+let consolidatedOutput = null;
+let nameComparisonOutput = null;
+const pairOutputs = {};
+
+function showError(message) {
+  errorHost.innerHTML = "";
+  const div = document.createElement("div");
+  div.className = "error-panel";
+  div.innerHTML = `<p class="et">Unable to Process File</p><p></p>`;
+  div.querySelector("p:last-child").textContent = message;
+  errorHost.appendChild(div);
+}
+function clearError() { errorHost.innerHTML = ""; }
+
+function setFile(file) {
+  selectedFile = file;
+  fileName.textContent = file.name;
+  fileChip.hidden = false;
+  dropzone.hidden = true;
+  step2.classList.remove("is-disabled");
+  clearError();
+  resultsEl.hidden = true;
+  primaryDownloads.hidden = true;
+  saveStatus.hidden = true;
+  saveStatus.classList.remove("error");
+}
+function resetFile() {
+  selectedFile = null;
+  fileInput.value = "";
+  fileChip.hidden = true;
+  dropzone.hidden = false;
+  step2.classList.add("is-disabled");
+  resultsEl.hidden = true;
+  primaryDownloads.hidden = true;
+  saveStatus.hidden = true;
+  saveStatus.classList.remove("error");
+  clearError();
+}
+
+dropzone.addEventListener("click", () => fileInput.click());
+dropzone.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); } });
+dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("is-dragover"); });
+dropzone.addEventListener("dragleave", () => dropzone.classList.remove("is-dragover"));
+dropzone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropzone.classList.remove("is-dragover");
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener("change", () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+clearFileBtn.addEventListener("click", resetFile);
+
+function readFileAsArrayBuffer(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Could not read the file."));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+runBtn.addEventListener("click", async () => {
+  if (!selectedFile) return;
+  clearError();
+  resultsEl.hidden = true;
+  primaryDownloads.hidden = true;
+  saveStatus.hidden = true;
+  saveStatus.classList.remove("error");
+  runBtn.disabled = true;
+  const originalLabel = runBtn.textContent;
+  runBtn.innerHTML = '<span class="spinner"></span>Processing…';
+  await new Promise((r) => setTimeout(r, 30)); // let the spinner paint before the sync work
+
+  try {
+    const buf = await readFileAsArrayBuffer(selectedFile);
+    const wb = XLSX.read(buf, { type: "array", cellNF: true });
+
+    function sheetRows(name) {
+      if (!wb.SheetNames.includes(name)) {
+        throw new Error(`Sheet '${name}' was not found. Available sheets: ${wb.SheetNames.join(", ")}`);
+      }
+      return readSheetRows(wb, name);
+    }
+
+    const books = readRecords(sheetRows("Books"), "Books");
+    const twoB = readRecords(sheetRows("2B"), "2B");
+    const threeBRows = wb.SheetNames.includes("3B") ? sheetRows("3B") : [];
+    if (!threeBRows.length) threeBRows.push(REQUIRED_FIELDS.concat([ITC_REFERENCE_FIELD, NATURE_OF_ITC_FIELD]));
+    const threeB = readRecords(threeBRows, "3B", {
+      requiredFields: [...REQUIRED_FIELDS, ITC_REFERENCE_FIELD, NATURE_OF_ITC_FIELD],
+      itcTypeField: ITC_REFERENCE_FIELD,
+      natureOfItcField: NATURE_OF_ITC_FIELD,
+    });
+    const { matches, unmatched2b, unmatchedBooks } = matchRecords(twoB, books);
+    const pairResults = {
+      twoBThreeB: matchRecords(twoB, threeB),
+      booksThreeB: matchRecords(books, threeB),
+    };
+    const threeWayResult = matchThreeWay(twoB, books, threeB);
+
+    renderResults(twoB, books, matches, unmatched2b, unmatchedBooks);
+    renderPairResults("twoBThreeB", "2B", twoB, "3B", threeB, pairResults.twoBThreeB);
+    renderPairResults("booksThreeB", "Books", books, "3B", threeB, pairResults.booksThreeB);
+    resultsEl.hidden = false;
+    resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    const outWb = buildOutputWorkbook(twoB, books, matches, unmatched2b, unmatchedBooks);
+    const wbout = XLSX.write(outWb, { bookType: "xlsx", type: "array" });
+    outputBlob = new Blob([wbout], { type: "application/octet-stream" });
+    outputName = selectedFile.name.replace(/\.(xlsx|xlsm|xltx|xltm)$/i, "") + " - Reconciliation Output.xlsx";
+    dlTitle.textContent = outputName;
+    const consolidatedWb = buildConsolidatedOutputWorkbook(
+      twoB, books, threeB,
+      threeWayResult.matches,
+      pairResults.booksThreeB,
+      [
+        ["2B", twoB, "Books", books, { matches, unmatched2b, unmatchedBooks }],
+        ["2B", twoB, "3B", threeB, pairResults.twoBThreeB],
+        ["Books", books, "3B", threeB, pairResults.booksThreeB],
+      ].map(([leftLabel, left, rightLabel, right, res]) => ({
+        leftLabel, left, rightLabel, right,
+        matches: res.matches.map((m) => ({ ...m, criterion: m.criterion, left: m.twoB, right: m.book })),
+        unL: res.unmatched2b, unR: res.unmatchedBooks,
+      })),
+    );
+    const consolidatedWbout = XLSX.write(consolidatedWb, { bookType: "xlsx", type: "array" });
+    const consolidatedName = selectedFile.name.replace(/\.(xlsx|xlsm|xltx|xltm)$/i, "") + " - ITC Reconciliation Consolidated.xlsx";
+    consolidatedOutput = {
+      blob: new Blob([consolidatedWbout], { type: "application/octet-stream" }),
+      name: consolidatedName,
+    };
+    dlTitleConsolidated.textContent = consolidatedName;
+    const nameComparisonWb = XLSX.utils.book_new();
+    buildSheet(nameComparisonWb, "Name Comparison", buildNameComparisonRows(twoB, books));
+    const nameComparisonWbout = XLSX.write(nameComparisonWb, { bookType: "xlsx", type: "array" });
+    const nameComparisonName = selectedFile.name.replace(/\.(xlsx|xlsm|xltx|xltm)$/i, "") + " - Name Comparison.xlsx";
+    nameComparisonOutput = {
+      blob: new Blob([nameComparisonWbout], { type: "application/octet-stream" }),
+      name: nameComparisonName,
+    };
+    dlTitleNameComparison.textContent = nameComparisonName;
+    const pairDefinitions = {
+      twoBThreeB: ["2B", twoB, "3B", threeB, "2B 3B"],
+      booksThreeB: ["Books", books, "3B", threeB, "Books 3B"],
+    };
+    for (const [key, [leftLabel, leftRecords, rightLabel, rightRecords, fileLabel]] of Object.entries(pairDefinitions)) {
+      const result = pairResults[key];
+      const pairWb = buildPairOutputWorkbook(
+        leftLabel, leftRecords, rightLabel, rightRecords,
+        result.matches.map((m) => ({ ...m, left: m.twoB, right: m.book })),
+        result.unmatched2b, result.unmatchedBooks,
+      );
+      const pairWbout = XLSX.write(pairWb, { bookType: "xlsx", type: "array" });
+      const name = selectedFile.name.replace(/\.(xlsx|xlsm|xltx|xltm)$/i, "") + ` - ${fileLabel} Reconciliation Output.xlsx`;
+      pairOutputs[key] = { blob: new Blob([pairWbout], { type: "application/octet-stream" }), name };
+      pairReportUi[key].title.textContent = name;
+    }
+    primaryDownloads.hidden = false;
+    saveStatus.hidden = true;
+
+  } catch (err) {
+    showError(err.message || String(err));
+  } finally {
+    runBtn.disabled = false;
+    runBtn.textContent = originalLabel;
+  }
+
+  function renderSummaryTable(body, summaryRows) {
+    const summaryTableHeaders = [RECIPIENT_FIELD, "Category", "Source / match type", "Entries", "Rows", "Taxable Value (₹)", "IGST (₹)", "CGST (₹)", "SGST/UT (₹)", "Cess (₹)"];
+    body.innerHTML = "";
+    for (const r of summaryRows) {
+      const cells = [
+        r.category, r.source, String(r.count), String(r.rows),
+        money(round2(r.amounts["Taxable Value (₹)"])),
+        money(round2(r.amounts["Integrated Tax(₹)"])),
+        money(round2(r.amounts["Central Tax(₹)"])),
+        money(round2(r.amounts["State/UT Tax(₹)"])),
+        money(round2(r.amounts["Cess(₹)"])),
+      ];
+      const tr = document.createElement("tr");
+      if (r.category === "Input") tr.classList.add("row-input");
+      if (r.category === "Unmatched") tr.classList.add("row-unmatched");
+      cells.forEach((val, i) => {
+        const td = document.createElement("td");
+        td.textContent = val;
+        td.setAttribute("data-label", summaryTableHeaders[i]);
+        if (i >= 2) td.classList.add("num");
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    }
+  }
+
+});
+
+const SUMMARY_TABLE_HEADERS = [RECIPIENT_FIELD, "Category", "Source / match type", "Entries", "Rows", "Taxable Value (₹)", "IGST (₹)", "CGST (₹)", "SGST/UT (₹)", "Cess (₹)"];
+
+// Rows for ONE scope: null = All Recipients, otherwise a single recipient GSTIN.
+function summaryRowsForScope(recipient, build) {
+  const label = recipient === null ? ALL_RECIPIENTS_LABEL : recipientLabel(recipient);
+  return build(recipient).map((row) => (row.category ? { ...row, recipient: label } : { ...row }));
+}
+
+function fillSummaryTable(body, rows, ctx) {
+  const labels = ["S.No.", ...SUMMARY_TABLE_HEADERS, "Download"];
+  body.innerHTML = "";
+  const addSpacer = () => {
+    const tr = document.createElement("tr");
+    tr.className = "row-spacer";
+    const td = document.createElement("td");
+    td.colSpan = labels.length;
+    tr.appendChild(td);
+    body.appendChild(tr);
+  };
+  let serial = 0;
+  let prevRow = null;
+  rows.forEach((r, idx) => {
+    if (!r.category) { addSpacer(); return; }
+    serial += 1;
+    const cells = [
+      String(serial), r.recipient || "", r.category, r.source, String(r.count), String(r.rows),
+      money(round2(r.amounts["Taxable Value (₹)"])),
+      money(round2(r.amounts["Integrated Tax(₹)"])),
+      money(round2(r.amounts["Central Tax(₹)"])),
+      money(round2(r.amounts["State/UT Tax(₹)"])),
+      money(round2(r.amounts["Cess(₹)"])),
+    ];
+    const tr = document.createElement("tr");
+    if (r.category === "Input") tr.classList.add("row-input");
+    if (r.category === "Unmatched") tr.classList.add("row-unmatched");
+    if (r.category === "Difference") tr.classList.add("row-difference");
+    cells.forEach((value, index) => {
+      const td = document.createElement("td");
+      td.textContent = value;
+      td.setAttribute("data-label", labels[index]);
+      if (index === 0) td.classList.add("sno");
+      if (index >= 4) td.classList.add("num");
+      tr.appendChild(td);
+    });
+    const dtd = document.createElement("td");
+    dtd.className = "dl";
+    dtd.setAttribute("data-label", "Download");
+    if (ctx && r.category === "Difference" && prevRow) {
+      const target = { category: prevRow.category, source: prevRow.source };
+      const total = pairEntryCount(ctx, target);
+      const label = pairLabel(ctx, target);
+      const viewBtn = document.createElement("button");
+      viewBtn.type = "button";
+      viewBtn.className = "vw-btn";
+      viewBtn.innerHTML = VIEW_ICON;
+      viewBtn.title = total ? `View the entries of this pair (${label}) online` : "No entries to view";
+      viewBtn.setAttribute("aria-label", viewBtn.title);
+      viewBtn.disabled = !total;
+      viewBtn.addEventListener("click", () => openViewModal(ctx, target));
+      const xlBtn = document.createElement("button");
+      xlBtn.type = "button";
+      xlBtn.className = "xl-btn";
+      xlBtn.innerHTML = XL_ICON;
+      xlBtn.title = total ? `Download the entries of this pair (${label}) as Excel` : "No entries to download";
+      xlBtn.setAttribute("aria-label", xlBtn.title);
+      xlBtn.disabled = !total;
+      xlBtn.addEventListener("click", () => downloadRowEntries(ctx, target));
+      dtd.appendChild(viewBtn);
+      dtd.appendChild(xlBtn);
+    }
+    if (r.category !== "Difference") prevRow = r;
+    tr.appendChild(dtd);
+    body.appendChild(tr);
+    // blank row after each Difference (unless a blank row already follows)
+    if (r.category === "Difference" && rows[idx + 1] && rows[idx + 1].category) addSpacer();
+  });
+}
+
+// Dropdown above each summary: "All Recipients" (default) or one GSTIN. Hidden when only one GSTIN exists.
+function markSnapshot(suffix, value) {
+  document.querySelectorAll(`#recipWrap${suffix} tbody tr`).forEach((tr) => {
+    tr.classList.toggle("is-selected", tr.dataset.scope === value);
+  });
+}
+
+// On-page version of the recipient snapshot so mismatching GSTINs stand out at a glance.
+function renderRecipientSnapshot(suffix, recipients, spec) {
+  const wrap = document.getElementById("recipWrap" + suffix);
+  wrap.innerHTML = "";
+  if (recipients.length < 2) { wrap.hidden = true; return; }
+  const snap = computeRecipientSnapshot(spec);
+  const table = document.createElement("table");
+  table.className = "recip-table";
+  const thead = document.createElement("thead");
+  const hr = document.createElement("tr");
+  snap.headers.forEach((h, i) => { const th = document.createElement("th"); th.textContent = h; if (i >= 1 && i <= 7) th.classList.add("num"); hr.appendChild(th); });
+  thead.appendChild(hr); table.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  snap.rows.forEach((row, idx) => {
+    const cells = row.values.map(String);
+    cells[6] = money(row.taxableDiff);
+    cells[7] = money(row.taxDiff);
+    const tr = document.createElement("tr");
+    tr.dataset.scope = row.rec === null ? "" : String(idx - 1);
+    if (row.rec === null) tr.classList.add("is-total");
+    cells.forEach((value, i) => {
+      const td = document.createElement("td");
+      td.textContent = value;
+      if (i >= 1 && i <= 7) td.classList.add("num");
+      if ((i === 4 || i === 5) && value !== "0") td.classList.add("is-warn");
+      if ((i === 6 && Math.abs(row.taxableDiff) >= 0.005) || (i === 7 && Math.abs(row.taxDiff) >= 0.005)) td.classList.add("is-warn");
+      if (i === 8) td.classList.add(row.clean ? "is-ok" : "is-warn");
+      tr.appendChild(td);
+    });
+    tr.addEventListener("click", () => {
+      const select = document.getElementById("scopeSel" + suffix);
+      select.value = tr.dataset.scope;
+      if (select.onchange) select.onchange();
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  const title = document.createElement("div");
+  title.className = "recip-title";
+  title.innerHTML = "Recipient-wise snapshot<span>Click a row to open its detailed summary below</span>";
+  wrap.appendChild(title); wrap.appendChild(table);
+  wrap.hidden = false;
+}
+
+function setupScopeSelect(suffix, recipients, drawScope) {
+  const draw = (rec) => {
+    drawScope(rec);
+    markSnapshot(suffix, rec === null ? "" : String(recipients.indexOf(rec)));
+  };
+  const row = document.getElementById("scopeRow" + suffix);
+  const select = document.getElementById("scopeSel" + suffix);
+  select.innerHTML = "";
+  if (recipients.length > 1) {
+    const all = document.createElement("option");
+    all.value = ""; all.textContent = `${ALL_RECIPIENTS_LABEL} (${recipients.length} GSTINs)`;
+    select.appendChild(all);
+    recipients.forEach((rec, i) => {
+      const o = document.createElement("option");
+      o.value = String(i); o.textContent = recipientLabel(rec);
+      select.appendChild(o);
+    });
+    row.hidden = false;
+    select.onchange = () => draw(select.value === "" ? null : recipients[Number(select.value)]);
+    draw(null);
+  } else {
+    row.hidden = true;
+    select.onchange = null;
+    draw(recipients.length ? recipients[0] : null);
+  }
+}
+
+const XL_ICON = '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="18" rx="3" fill="#1D6F42"/><rect x="12" y="6" width="8" height="12" rx="1" fill="#fff" opacity=".9"/><path d="M12 9h8M12 12h8M12 15h8M16 6v12" stroke="#1D6F42" stroke-width=".8"/><path d="M5.2 8.2h2.4l1.3 2.3 1.3-2.3h2.3l-2.4 3.8 2.5 3.9h-2.4L8.9 13.5l-1.4 2.4H5.1l2.5-3.9z" fill="#fff"/></svg>';
+const VIEW_ICON = '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3.2"/></svg>';
+
+// Label of the recipient scope shown in the table: "" when there is a single GSTIN.
+function scopeTextFor(recipients, rec) {
+  if (rec === null) return recipients.length > 1 ? ALL_RECIPIENTS_LABEL : "";
+  return recipientLabel(rec);
+}
+// Normalises matches to {criterion, left, right}
+function toCtxMatches(list) {
+  return list.map((m) => ({
+    criterion: m.criterion,
+    left: "left" in m ? m.left : m.twoB,
+    right: "right" in m ? m.right : m.book,
+  }));
+}
+
+// A "pair" is a group in the summary table (Input, one match criterion, or Unmatched)
+// that ends in a Difference row. target = {category, source} of a row in that group.
+function pairCriterion(ctx, target) {
+  return target.source.replace(new RegExp(` - (?:${ctx.leftLabel}|${ctx.rightLabel})$`), "");
+}
+function pairLabel(ctx, target) {
+  return target.category === "Matched" ? pairCriterion(ctx, target) : target.category;
+}
+function pairEntryCount(ctx, target) {
+  if (target.category === "Matched") return ctx.matches.filter((m) => m.criterion === pairCriterion(ctx, target)).length;
+  if (target.category === "Input") return ctx.left.length + ctx.right.length;
+  return ctx.unL.length + ctx.unR.length;
+}
+// Matched: one sheet with both sides side by side. Input / Unmatched: one sheet per source.
+function rowDownloadSpec(ctx, target) {
+  const { leftLabel, rightLabel } = ctx;
+  const hdr = (label) => label === "3B" ? OUTPUT_HEADERS_3B : OUTPUT_HEADERS;
+  const vals = (rec, label) => label === "3B" ? pairRecordValues3B(rec, label) : pairRecordValues(rec, label);
+  const count = pairEntryCount(ctx, target);
+  if (target.category === "Matched") {
+    const criterion = pairCriterion(ctx, target);
+    const cm = ctx.matches.filter((m) => m.criterion === criterion);
+    return {
+      title: criterion, count,
+      sheets: [{
+        title: criterion,
+        aoa: [
+          ["Match Criterion", ...hdr(leftLabel).map((h) => `${leftLabel} - ${h}`), ...hdr(rightLabel).map((h) => `${rightLabel} - ${h}`)],
+          ...cm.map((m) => [m.criterion, ...vals(m.left, leftLabel), ...vals(m.right, rightLabel)]),
+        ],
+      }],
+    };
+  }
+  const input = target.category === "Input";
+  const sides = [[leftLabel, input ? ctx.left : ctx.unL], [rightLabel, input ? ctx.right : ctx.unR]];
+  return {
+    title: target.category, count,
+    sheets: sides.map(([label, list]) => ({ title: `${target.category} - ${label}`, aoa: [hdr(label), ...list.map((x) => vals(x, label))] })),
+  };
+}
+
+const VM_LIMIT = 500;
+let vmState = null;
+let vmReady = false;
+const vmEsc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function closeViewModal() {
+  document.getElementById("viewModal").hidden = true;
+  vmState = null;
+}
+function openViewModal(ctx, target) {
+  const spec = rowDownloadSpec(ctx, target);
+  if (!spec || !spec.count) return;
+  if (!vmReady) {
+    vmReady = true;
+    document.getElementById("vmClose").addEventListener("click", closeViewModal);
+    document.getElementById("vmDone").addEventListener("click", closeViewModal);
+    document.getElementById("viewModal").addEventListener("click", (e) => { if (e.target.id === "viewModal") closeViewModal(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && vmState) closeViewModal(); });
+    document.getElementById("vmDownload").addEventListener("click", () => { if (vmState) downloadRowEntries(vmState.ctx, vmState.target); });
+    document.getElementById("vmFilter").addEventListener("input", (e) => {
+      if (vmState) { vmState.filter = e.target.value; renderViewTable(); }
+    });
+  }
+  vmState = { ctx, target, spec, tab: 0, filter: "" };
+  document.getElementById("vmTitle").textContent = `${ctx.leftLabel} vs ${ctx.rightLabel} - ${pairLabel(ctx, target)}`;
+  document.getElementById("vmSub").textContent =
+    (ctx.scopeText ? `${RECIPIENT_FIELD}: ${ctx.scopeText} - ` : "") +
+    `${spec.count} entr${spec.count === 1 ? "y" : "ies"}` +
+    (target.category === "Matched" ? ` - matched pairs, ${ctx.leftLabel} and ${ctx.rightLabel} shown side by side` : " - one tab per source");
+  document.getElementById("vmFilter").value = "";
+  document.getElementById("viewModal").hidden = false;
+  renderViewTable();
+}
+function renderViewTable() {
+  const { spec, tab, filter } = vmState;
+  const tabs = document.getElementById("vmTabs");
+  tabs.innerHTML = "";
+  if (spec.sheets.length > 1) {
+    spec.sheets.forEach((sheet, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "vm-tab" + (i === tab ? " on" : "");
+      b.textContent = `${sheet.title} (${sheet.aoa.length - 1})`;
+      b.addEventListener("click", () => { vmState.tab = i; renderViewTable(); });
+      tabs.appendChild(b);
+    });
+  }
+  const sheet = spec.sheets[tab];
+  const q = filter.trim().toLowerCase();
+  const all = sheet.aoa.slice(1);
+  const hits = q ? all.filter((row) => row.some((v) => String(v).toLowerCase().includes(q))) : all;
+  const shown = hits.slice(0, VM_LIMIT);
+  const table = document.getElementById("vmTable");
+  if (!shown.length) {
+    table.innerHTML = `<tbody><tr><td class="vm-empty">${all.length ? "No entries match the filter." : "No entries."}</td></tr></tbody>`;
+  } else {
+    const numCols = sheet.aoa[0].map((h, c) => shown.some((row) => typeof row[c] === "number"));
+    const head = sheet.aoa[0].map((h, c) => `<th${numCols[c] ? ' class="num"' : ""}>${vmEsc(h)}</th>`).join("");
+    const body = shown.map((row) => "<tr>" + sheet.aoa[0].map((h, c) => {
+      const v = row[c];
+      return typeof v === "number" ? `<td class="num">${fmt.format(v)}</td>` : `<td>${vmEsc(v === null || v === undefined ? "" : v)}</td>`;
+    }).join("") + "</tr>").join("");
+    table.innerHTML = `<thead><tr>${head}</tr></thead><tbody>${body}</tbody>`;
+  }
+  document.getElementById("vmCount").textContent = hits.length > shown.length
+    ? `Showing first ${shown.length} of ${hits.length} - download the Excel for the full list`
+    : `${hits.length} entr${hits.length === 1 ? "y" : "ies"}`;
+}
+
+async function downloadRowEntries(ctx, target) {
+  const spec = rowDownloadSpec(ctx, target);
+  if (!spec || !spec.count) return;
+  saveStatus.hidden = true;
+  saveStatus.classList.remove("error");
+  try {
+    const wb = XLSX.utils.book_new();
+    spec.sheets.forEach((sheet) => buildSheet(wb, sheet.title, sheet.aoa));
+    const blob = new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })], { type: "application/octet-stream" });
+    const base = selectedFile ? selectedFile.name.replace(/\.(xlsx|xlsm|xltx|xltm)$/i, "") : "ITC Reconciliation";
+    const scope = ctx.scopeText ? ` - ${ctx.scopeText}` : "";
+    const name = `${base} - ${ctx.leftLabel} vs ${ctx.rightLabel}${scope} - ${spec.title}.xlsx`.replace(/[\\/:*?"<>|]/g, "-");
+    const result = await saveFile(name, blob);
+    if (!result.ok) {
+      saveStatus.textContent = "Downloads are unavailable in this view. Please open this page in a standalone browser tab and try again.";
+      saveStatus.classList.add("error");
+    } else {
+      saveStatus.textContent = `Saved ${spec.count} entr${spec.count === 1 ? "y" : "ies"}: ${name}`;
+    }
+    saveStatus.hidden = false;
+  } catch (err) {
+    if (err && err.code === "declined") return;
+    saveStatus.textContent = "Unable to save the file. Please try again.";
+    saveStatus.classList.add("error");
+    saveStatus.hidden = false;
+  }
+}
+
+function summaryCards(matched, unmatchedLeft, unmatchedRight, leftLabel, rightLabel) {
+  return `
+    <div class="summary-cell matched"><div class="n">${matched}</div><div class="l">Matched pairs</div></div>
+    <div class="summary-cell unmatched"><div class="n">${unmatchedLeft}</div><div class="l">Unmatched in ${leftLabel}</div></div>
+    <div class="summary-cell unmatched"><div class="n">${unmatchedRight}</div><div class="l">Unmatched in ${rightLabel}</div></div>
+  `;
+}
+
+function renderResults(twoB, books, matches, unmatched2b, unmatchedBooks) {
+  const recipients = collectRecipients(twoB, books);
+  renderRecipientSnapshot("", recipients, {
+    leftLabel: "2B", rightLabel: "Books", left: twoB, right: books, matches,
+    unmatchedLeft: unmatched2b, unmatchedRight: unmatchedBooks,
+  });
+  setupScopeSelect("", recipients, (rec) => {
+    summaryGrid.innerHTML = summaryCards(
+      onlyMatches(matches, rec).length, onlyRecipient(unmatched2b, rec).length, onlyRecipient(unmatchedBooks, rec).length, "2B", "Books",
+    );
+    fillSummaryTable(summaryTableBody, summaryRowsForScope(rec, (r) => rowsWithDifferences(
+      computeSummaryRows(onlyRecipient(twoB, r), onlyRecipient(books, r), onlyMatches(matches, r), onlyRecipient(unmatched2b, r), onlyRecipient(unmatchedBooks, r)),
+      ["2B", "Books"],
+    )), {
+      leftLabel: "2B", left: onlyRecipient(twoB, rec), rightLabel: "Books", right: onlyRecipient(books, rec),
+      matches: toCtxMatches(onlyMatches(matches, rec)),
+      unL: onlyRecipient(unmatched2b, rec), unR: onlyRecipient(unmatchedBooks, rec),
+      scopeText: scopeTextFor(recipients, rec),
+    });
+  });
+}
+
+function renderPairResults(key, leftLabel, leftRecords, rightLabel, rightRecords, result) {
+  const ui = pairReportUi[key];
+  const suffix = key === "twoBThreeB" ? "TwoBThreeB" : "BooksThreeB";
+  const pairMatches = result.matches.map((m) => ({ ...m, left: m.twoB, right: m.book }));
+  const recipients = collectRecipients(leftRecords, rightRecords);
+  renderRecipientSnapshot(suffix, recipients, {
+    leftLabel, rightLabel, left: leftRecords, right: rightRecords, matches: pairMatches,
+    unmatchedLeft: result.unmatched2b, unmatchedRight: result.unmatchedBooks,
+  });
+  setupScopeSelect(suffix, recipients, (rec) => {
+    ui.grid.innerHTML = summaryCards(
+      onlyMatches(pairMatches, rec).length, onlyRecipient(result.unmatched2b, rec).length, onlyRecipient(result.unmatchedBooks, rec).length, leftLabel, rightLabel,
+    );
+    fillSummaryTable(ui.body, summaryRowsForScope(rec, (r) => rowsWithDifferences(
+      computePairSummaryRows(
+        leftLabel, onlyRecipient(leftRecords, r), rightLabel, onlyRecipient(rightRecords, r),
+        onlyMatches(pairMatches, r), onlyRecipient(result.unmatched2b, r), onlyRecipient(result.unmatchedBooks, r),
+      ),
+      [leftLabel, rightLabel],
+    )), {
+      leftLabel, left: onlyRecipient(leftRecords, rec), rightLabel, right: onlyRecipient(rightRecords, rec),
+      matches: toCtxMatches(onlyMatches(pairMatches, rec)),
+      unL: onlyRecipient(result.unmatched2b, rec), unR: onlyRecipient(result.unmatchedBooks, rec),
+      scopeText: scopeTextFor(recipients, rec),
+    });
+  });
+}
+
+// Saves a file whether this page is running as a claude.ai artifact (which
+// has a dedicated save capability) or as a plain HTML file opened directly
+// in a browser (which needs an ordinary <a download> click).
+function browserDownload(filename, blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+async function saveFile(filename, blob) {
+  const inClaudeRuntime = typeof window.claude !== "undefined" && typeof window.claude.use === "function";
+  if (!inClaudeRuntime) {
+    browserDownload(filename, blob);
+    return { ok: true, status: "saved" };
+  }
+  const downloads = await window.claude.use("downloads");
+  if (!downloads) return { ok: false, reason: "unavailable" };
+  const result = await downloads.save({ filename, data: blob });
+  return { ok: true, status: result.status };
+}
+
+downloadBtn.addEventListener("click", async () => {
+  if (!outputBlob) return;
+  saveStatus.hidden = true;
+  saveStatus.classList.remove("error");
+  try {
+    const result = await saveFile(outputName, outputBlob);
+    if (!result.ok) {
+      saveStatus.textContent = "Downloads are unavailable in this view. Please open this page in a standalone browser tab and try again.";
+      saveStatus.classList.add("error");
+      saveStatus.hidden = false;
+      return;
+    }
+    saveStatus.textContent = result.status === "saved" ? "File saved successfully." : "File sent successfully.";
+    saveStatus.hidden = false;
+  } catch (err) {
+    const code = err && err.code;
+    if (code === "declined") return; // user said no, no need to nag
+    let msg = "Unable to save the file. Please try again.";
+    if (code === "too_large") msg = "This file exceeds the size limit and cannot be saved here.";
+    saveStatus.textContent = msg;
+    saveStatus.classList.add("error");
+    saveStatus.hidden = false;
+  }
+});
+
+async function downloadPairReport(key) {
+  const output = pairOutputs[key];
+  if (!output) return;
+  saveStatus.hidden = true;
+  saveStatus.classList.remove("error");
+  try {
+    const result = await saveFile(output.name, output.blob);
+    if (!result.ok) {
+      saveStatus.textContent = "Downloads are unavailable in this view. Please open this page in a standalone browser tab and try again.";
+      saveStatus.classList.add("error");
+      saveStatus.hidden = false;
+      return;
+    }
+
+    saveStatus.textContent = result.status === "saved" ? "File saved successfully." : "File sent successfully.";
+    saveStatus.hidden = false;
+  } catch (err) {
+    saveStatus.textContent = "Unable to save the file. Please try again.";
+    saveStatus.classList.add("error");
+    saveStatus.hidden = false;
+  }
+}
+
+downloadBtnConsolidated.addEventListener("click", async () => {
+  if (!consolidatedOutput) return;
+  saveStatus.hidden = true;
+  saveStatus.classList.remove("error");
+  try {
+    const result = await saveFile(consolidatedOutput.name, consolidatedOutput.blob);
+    if (!result.ok) {
+      saveStatus.textContent = "Downloads are unavailable in this view. Please open this page in a standalone browser tab and try again.";
+      saveStatus.classList.add("error");
+      saveStatus.hidden = false;
+      return;
+    }
+    saveStatus.textContent = result.status === "saved" ? "File saved successfully." : "File sent successfully.";
+    saveStatus.hidden = false;
+  } catch (err) {
+    saveStatus.textContent = "Unable to save the file. Please try again.";
+    saveStatus.classList.add("error");
+    saveStatus.hidden = false;
+  }
+});
+
+downloadBtnNameComparison.addEventListener("click", async () => {
+  if (!nameComparisonOutput) return;
+  saveStatus.hidden = true;
+  saveStatus.classList.remove("error");
+  try {
+    const result = await saveFile(nameComparisonOutput.name, nameComparisonOutput.blob);
+    if (!result.ok) {
+      saveStatus.textContent = "Downloads are unavailable in this view. Please open this page in a standalone browser tab and try again.";
+      saveStatus.classList.add("error");
+      saveStatus.hidden = false;
+      return;
+    }
+    saveStatus.textContent = result.status === "saved" ? "File saved successfully." : "File sent successfully.";
+    saveStatus.hidden = false;
+  } catch (err) {
+    saveStatus.textContent = "Unable to save the file. Please try again.";
+    saveStatus.classList.add("error");
+    saveStatus.hidden = false;
+  }
+});
+
+for (const [key, ui] of Object.entries(pairReportUi)) {
+  ui.button.addEventListener("click", () => downloadPairReport(key));
+}
+
+const reportTabs = [
+  [tabExisting, panelExisting],
+  [document.getElementById("tabTwoBThreeB"), document.getElementById("panelTwoBThreeB")],
+  [document.getElementById("tabBooksThreeB"), document.getElementById("panelBooksThreeB")],
+];
+function selectReport(selectedTab, selectedPanel) {
+  for (const [tab, panel] of reportTabs) {
+    const selected = tab === selectedTab;
+    tab.classList.toggle("is-active", selected);
+    tab.setAttribute("aria-selected", String(selected));
+    panel.hidden = !selected;
+  }
+}
+for (const [tab, panel] of reportTabs) {
+  tab.addEventListener("click", () => selectReport(tab, panel));
+}
+
+downloadTemplateBtn.addEventListener("click", async () => {
+  const header = [RECIPIENT_FIELD, KEY_FIELDS[0], "Trade/Legal Name", KEY_FIELDS[1], KEY_FIELDS[2], MONTH_FIELD, ...AMOUNT_FIELDS];
+  const threeBHeader = [...header, ITC_REFERENCE_FIELD, NATURE_OF_ITC_FIELD];
+  const wb = XLSX.utils.book_new();
+  function buildTemplateSheet(title, columns) {
+    const wsName = buildSheet(wb, title, [columns, Array(columns.length).fill(null)]);
+    const ws = wb.Sheets[wsName];
+    const monthColumn = columns.indexOf(MONTH_FIELD);
+    if (monthColumn >= 0) {
+      const monthCell = XLSX.utils.encode_cell({ r: 1, c: monthColumn });
+      ws[monthCell] = { t: "s", v: "", s: { numFmt: "@" } };
+    }
+    if (title === "3B") {
+      const natureColumn = columns.indexOf(NATURE_OF_ITC_FIELD);
+      const natureColumnRef = XLSX.utils.encode_col(natureColumn);
+      ws["!dataValidation"] = [{
+        sqref: `${natureColumnRef}2:${natureColumnRef}1048576`,
+        type: "list",
+        formula1: `"${NATURE_OF_ITC_OPTIONS.join(",")}"`,
+        allowBlank: true,
+        showErrorMessage: true,
+        errorTitle: "Invalid Nature of ITC",
+        error: "Select a Nature of ITC from the dropdown list.",
+      }];
+    }
+    return wsName;
+  }
+  buildTemplateSheet("Books", header);
+  buildTemplateSheet("2B", header);
+  buildTemplateSheet("3B", threeBHeader);
+  const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const zip = await JSZip.loadAsync(wbout);
+  const templateSheetXml = await zip.file("xl/worksheets/sheet3.xml").async("string");
+  const natureColumn = XLSX.utils.encode_col(threeBHeader.indexOf(NATURE_OF_ITC_FIELD));
+  const validationXml = `<dataValidations count="1"><dataValidation type="list" allowBlank="1" showErrorMessage="1" errorTitle="Invalid Nature of ITC" error="Select a Nature of ITC from the dropdown list." sqref="${natureColumn}2:${natureColumn}1048576"><formula1>"${NATURE_OF_ITC_OPTIONS.join(",")}"</formula1></dataValidation></dataValidations>`;
+  const validationInsertPoint = templateSheetXml.includes("<ignoredErrors")
+    ? "<ignoredErrors"
+    : "</worksheet>";
+  const templateSheetWithValidation = templateSheetXml.replace(
+    validationInsertPoint,
+    `${validationXml}${validationInsertPoint}`,
+  );
+  zip.file("xl/worksheets/sheet3.xml", templateSheetWithValidation);
+  const templateWbout = await zip.generateAsync({ type: "arraybuffer" });
+  const blob = new Blob([templateWbout], { type: "application/octet-stream" });
+  try {
+    await saveFile("Reconciliation Template.xlsx", blob);
+  } catch (e) { /* silent — optional convenience action */ }
+});
+</script>
+<div class="vm-overlay" id="viewModal" hidden>
+  <div class="vm-box" role="dialog" aria-modal="true" aria-labelledby="vmTitle">
+    <div class="vm-head">
+      <div><h3 id="vmTitle"></h3><p id="vmSub"></p></div>
+      <button type="button" class="vm-close" id="vmClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="vm-tools">
+      <div class="vm-tabs" id="vmTabs"></div>
+      <input type="search" id="vmFilter" placeholder="Filter entries (GSTIN, name, invoice, month…)">
+      <span id="vmCount"></span>
+    </div>
+    <div class="vm-body"><table id="vmTable"></table></div>
+    <div class="vm-foot">
+      <button type="button" class="vm-btn primary" id="vmDownload">Download Excel</button>
+      <button type="button" class="vm-btn" id="vmDone">Close</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
