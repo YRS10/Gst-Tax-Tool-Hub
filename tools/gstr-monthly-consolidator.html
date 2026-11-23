@@ -1,0 +1,2496 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GSTR Monthly Consolidation Dashboard</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1c2530;
+      --muted: #6b7684;
+      --line: #e4e0d6;
+      --surface: #ffffff;
+      --canvas: #f6f3ec;
+      --accent: #0f766e;
+      --accent-dark: #0a5a54;
+      --accent-soft: #e6f4f1;
+      --navy: #0f1b2d;
+      --green: #15803d;
+      --amber-bg: #fff6df;
+      --amber-ink: #7a5200;
+      --shadow: 0 1px 2px rgb(15 27 45 / 6%), 0 10px 28px rgb(15 27 45 / 7%);
+      font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-size: 14px;
+    }
+
+    header {
+      padding: 44px 24px 56px;
+      background:
+        radial-gradient(900px 260px at 50% -40%, rgb(45 212 191 / 28%), transparent 70%),
+        var(--navy);
+      color: #fff;
+      text-align: center;
+      border-bottom: 4px solid var(--accent);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 3.4vw, 38px);
+      font-weight: 700;
+      letter-spacing: -.02em;
+      text-align: center;
+    }
+
+    header p {
+      max-width: 720px;
+      margin: 14px auto 0;
+      color: #b8c4d4;
+      line-height: 1.6;
+      text-align: center;
+    }
+
+    main {
+      width: min(1200px, calc(100% - 32px));
+      margin: -28px auto 44px;
+    }
+
+    .card {
+      margin-bottom: 20px;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-top: 3px solid var(--accent);
+      border-radius: 16px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 18px;
+      color: var(--navy);
+    }
+
+    .intro {
+      margin: 7px 0 18px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .drop-zone {
+      display: grid;
+      min-height: 174px;
+      place-items: center;
+      padding: 22px;
+      border: 2px dashed #9fc9c4;
+      border-radius: 14px;
+      background: var(--accent-soft);
+      text-align: center;
+      transition: border-color .15s, background .15s;
+    }
+
+    .drop-zone:focus-visible { outline: 3px solid rgb(15 118 110 / 35%); outline-offset: 2px; }
+
+    .drop-zone.dragging {
+      border-color: var(--accent);
+      background: #d3ece8;
+    }
+
+    .drop-zone strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 16px;
+    }
+
+    .drop-zone p {
+      margin: 0 0 14px;
+      color: var(--muted);
+    }
+
+    button, .file-button {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 9px 20px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 650;
+      text-decoration: none;
+      transition: background .15s, transform .15s;
+    }
+
+    button:hover:not(:disabled), .file-button:hover {
+      background: var(--accent-dark);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .45;
+    }
+
+    button.secondary {
+      border: 1px solid #cfcabd;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    button.secondary:hover:not(:disabled) { background: #f6f3ec; }
+    input[type="file"] { display: none; }
+
+    .privacy {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      margin: 16px 0 0;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: #f1f6ef;
+      color: #2d5a3a;
+      line-height: 1.45;
+    }
+
+    .privacy svg { flex: 0 0 18px; margin-top: 1px; }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+
+    .status {
+      min-height: 22px;
+      margin: 14px 0 0;
+      color: var(--muted);
+    }
+
+    .status.error { color: #b42318; }
+    .status.success { color: var(--green); }
+
+    .file-list {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+      gap: 10px;
+      margin-top: 17px;
+    }
+
+    .summary-item {
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--accent);
+      border-radius: 10px;
+      background: #fcfbf8;
+    }
+
+    .summary-item span {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .summary-item strong { font-size: 16px; }
+
+    .notice {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: var(--amber-bg);
+      color: var(--amber-ink);
+      line-height: 1.5;
+    }
+
+    .reconciliation-alert {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border: 1px solid #f0c8bf;
+      border-radius: 10px;
+      background: #fff2ef;
+      color: #873b2c;
+      line-height: 1.5;
+    }
+
+    .reconciliation-alert strong { display: block; margin-bottom: 4px; }
+    .reconciliation-alert ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .reconciliation-alert li {
+      max-width: 100%;
+      padding: 5px 9px;
+      border: 1px solid #f0c8bf;
+      border-radius: 8px;
+      background: #fff;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .table-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 16px 0 12px;
+    }
+
+    label.select-label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    select {
+      min-width: min(330px, calc(100vw - 64px));
+      min-height: 40px;
+      padding: 8px 34px 8px 10px;
+      border: 1px solid #cfcabd;
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    .log-table td { text-align: left; white-space: normal; vertical-align: top; min-width: 90px; }
+    .log-table td:first-child { min-width: 220px; word-break: break-all; }
+    .log-table td:nth-child(6) { min-width: 340px; }
+    .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .pill.ok { background: #dcf5e4; color: #176b34; }
+    .pill.warn { background: #fff0c2; color: #7a5200; }
+    .pill.err { background: #fde0dd; color: #a1281c; }
+
+    .download-select { min-width: 240px; }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 560px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    th, td {
+      min-width: 118px;
+      padding: 10px 12px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th {
+      position: sticky;
+      z-index: 1;
+      top: 0;
+      background: var(--navy);
+      color: #e8eef6;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    th:first-child, td:first-child {
+      position: sticky;
+      z-index: 2;
+      left: 0;
+      min-width: 190px;
+      text-align: left;
+    }
+
+    th:first-child {
+      z-index: 3;
+      background: #08111f;
+    }
+
+    td:first-child { background: #fff; font-weight: 600; }
+    tbody tr:nth-child(even) td { background: #faf8f3; }
+    tbody tr:nth-child(even) td:first-child { background: #f3f0e8; }
+    tbody tr:hover td { background: var(--accent-soft); }
+    td.empty { color: #aab2bd; }
+
+    .empty-state {
+      padding: 32px;
+      border: 1px dashed #d4cfc2;
+      border-radius: 10px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .small-note {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 32px 18px 48px; }
+      main { width: min(100% - 20px, 1200px); }
+      .card { padding: 16px; }
+      .toolbar { align-items: flex-start; }
+      .toolbar-actions { width: 100%; }
+      .toolbar-actions button { flex: 1; }
+    }
+
+    /* ITC reconciliation dashboard visual system */
+    :root {
+      --ink: #182230;
+      --muted: #617064;
+      --line: #e3e8e5;
+      --surface: #ffffff;
+      --canvas: #f4f6f9;
+      --accent: #1d6b52;
+      --accent-dark: #15543f;
+      --accent-soft: #f0f7f3;
+      --navy: #14251f;
+      --green: #1d6b52;
+      --amber-bg: #fff8e6;
+      --amber-ink: #7a5200;
+      --shadow: 0 8px 26px rgba(22, 51, 39, 0.08);
+    }
+
+    body { background: var(--canvas); }
+
+    header {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 34px 28px 0;
+      background: transparent;
+      border: 0;
+      color: var(--ink);
+      text-align: left;
+    }
+
+    .topline {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 30px;
+      color: #576577;
+      font-size: 13px;
+      font-weight: 650;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 35px;
+      height: 35px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    header h1 {
+      max-width: none;
+      color: #14251f;
+      font-size: clamp(29px, 4vw, 42px);
+      line-height: 1.08;
+      letter-spacing: -.045em;
+      text-align: left;
+    }
+
+    header p.lede {
+      max-width: 730px;
+      margin: 13px 0 25px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.65;
+      text-align: left;
+    }
+
+    header p.lede strong { color: #253a30; }
+
+    header .notice,
+    .privacy {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin: 0 0 22px;
+      padding: 14px 16px;
+      border: 1px solid #dce9e2;
+      border-radius: 12px;
+      background: #f0f7f3;
+      color: #345c48;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto 44px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-top: 0;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 { color: var(--ink); }
+
+    .drop-zone {
+      min-height: 176px;
+      border: 1.5px dashed #b9ccc1;
+      border-radius: 13px;
+      background: #fbfdfb;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragging {
+      border-color: var(--accent);
+      background: #f0f7f3;
+    }
+
+    button,
+    .file-button {
+      border-radius: 9px;
+      background: var(--accent);
+      font-size: 13px;
+    }
+
+    button:hover:not(:disabled),
+    .file-button:hover { background: var(--accent-dark); }
+
+    button.secondary {
+      border: 1px solid #c9d3e0;
+      color: #34443a;
+    }
+
+    .howto {
+      margin: 0 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .howto > summary {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 15px 20px;
+      cursor: pointer;
+      list-style: none;
+      color: #1e4834;
+      font-weight: 700;
+    }
+
+    .howto > summary::-webkit-details-marker { display: none; }
+    .howto > summary::before {
+      content: "\25B8";
+      color: var(--accent);
+      transition: transform .15s;
+    }
+    .howto[open] > summary::before { transform: rotate(90deg); }
+
+    .howto-body {
+      padding: 2px 22px 20px;
+      border-top: 1px solid #edf1ee;
+      color: #35463c;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .howto-body h3 {
+      margin: 20px 0 6px;
+      color: #14251f;
+      font-size: 15px;
+    }
+
+    .howto-body ol,
+    .howto-body ul { margin: 6px 0 6px 20px; padding: 0; }
+    .howto-body li { margin: 3px 0; }
+    .howto-body code {
+      padding: 1px 6px;
+      border-radius: 5px;
+      background: #eef3f0;
+      font-size: 12.5px;
+    }
+
+    .howto-body .tip {
+      margin: 10px 0;
+      padding: 9px 12px;
+      border: 1px solid #f0e0b0;
+      border-radius: 10px;
+      background: #fff8e6;
+    }
+
+    .summary-item,
+    .table-wrap,
+    .notice:not(.privacy) {
+      border-radius: 10px;
+    }
+
+    @media (max-width: 760px) {
+      header { padding: 23px 16px 0; }
+      main { width: calc(100% - 32px); }
+      .topline { margin-bottom: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topline"><span class="mark">GST</span> GST Compliance Suite</div>
+    <h1>GSTR Monthly Consolidation Dashboard</h1>
+    <p class="lede">Combine filed <strong>GSTR-1, GSTR-1A and GSTR-3B</strong> PDF returns into monthly and annual data matrices, then download the complete Excel workbook.</p>
+    <div class="notice"><span aria-hidden="true">●</span><div><strong>Private and local.</strong> PDF files are processed only in this browser. No return data is uploaded or stored on a server.</div></div>
+  </header>
+
+  <main>
+    <details class="howto" id="howto">
+      <summary>How to use this tool (portal downloads and output guide)</summary>
+      <div class="howto-body">
+        <h3>Step 1: Download filed returns from the GST portal</h3>
+        <ol>
+          <li>Open <code>Services &gt; Returns &gt; Returns Dashboard</code> and select the required GSTIN and return period.</li>
+          <li>Download the <strong>filed GSTR-3B</strong> PDF for the monthly period from <em>View Filed Return</em> or the PDF/download option shown for the filed return.</li>
+          <li>For GSTR-1, use <strong>Services &gt; Returns &gt; Returns Dashboard &gt; GSTR-1 &gt; Prepare Online / View Filed GSTR-1</strong>, then download or print the filed GSTR-1 as a PDF.</li>
+          <li>If GSTR-1A is filed for the period, download the <strong>filed GSTR-1A PDF</strong> using the same return-period and view filed return options.</li>
+        </ol>
+        <div class="tip"><strong>Important:</strong> download the <strong>filed/acknowledged</strong> PDFs, not the draft preview. PDFs must contain selectable text; scanned or image-only PDFs require OCR before upload.</div>
+
+        <h3>Step 2: Upload the PDFs</h3>
+        <ol>
+          <li>Drag and drop GSTR-3B, GSTR-1 and GSTR-1A PDFs into the upload area, or use <strong>Choose PDF files</strong>.</li>
+          <li>Files of different GSTINs can be processed together. The workbook separates data by GSTIN and financial year.</li>
+          <li>Processing is automatic. Review any unread or missing-table warnings before export.</li>
+        </ol>
+
+        <h3>Step 3: Review and export</h3>
+        <ol>
+          <li>Use <strong>Preview table</strong> to check the extracted data matrix.</li>
+          <li>Click <strong>Download Excel workbook</strong>. Annual totals appear before monthly rows in the data sheets.</li>
+          <li><strong>GSTR Reconciliation</strong> compares GSTR-3B Table 3.1 with GSTR-1 plus GSTR-1A; inward supplies under reverse charge are excluded. Difference rows are highlighted and bold.</li>
+          <li><strong>RCM Reconciliation</strong> compares GSTR-3B Table 3.1(d) (inward supplies liable to reverse charge) with Table 4A(3) (ITC on inward supplies liable to reverse charge, other than imports). Both reconciliation sheets are placed right after the Processing Log sheet in the workbook.</li>
+        </ol>
+        <div class="tip"><strong>Review first:</strong> always compare the downloaded output with the filed GST portal returns before using it for reporting or compliance.</div>
+      </div>
+    </details>
+
+    <section class="card" aria-labelledby="upload-title">
+      <h2 id="upload-title">1. Add monthly return PDFs</h2>
+      <p class="intro">Select one or more GSTR-1, GSTR-1A or GSTR-3B PDFs. The files are read in this browser and are not uploaded to a server.</p>
+      <div class="drop-zone" id="dropZone" tabindex="0" role="button" aria-label="Select or drop GST return PDF files">
+        <div>
+          <strong>Drop your monthly GST return PDFs here</strong>
+          <p>Or browse to select multiple PDF files at once.</p>
+          <label class="file-button" for="fileInput">Choose PDF files</label>
+          <input id="fileInput" type="file" accept="application/pdf,.pdf" multiple>
+        </div>
+      </div>
+      <div class="privacy">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M12 3 4.5 6v5.5c0 4.7 3.2 8.6 7.5 9.5 4.3-.9 7.5-4.8 7.5-9.5V6L12 3Z" stroke="currentColor" stroke-width="1.8"/>
+          <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>PDF contents stay on your device. The PDF text engine (and, for image-only PDFs, the OCR engine) is loaded from a public CDN when needed; no return data is sent to it.</span>
+      </div>
+      <div id="status" class="status" role="status" aria-live="polite">Choose PDFs to begin.</div>
+      <div id="fileList" class="file-list" aria-live="polite"></div>
+    </section>
+
+    <section class="card" aria-labelledby="results-title">
+      <div class="toolbar">
+        <div>
+          <h2 id="results-title">2. Review and export</h2>
+          <p class="intro" style="margin-bottom:0">Review extracted rows by return table, then export the complete workbook.</p>
+        </div>
+        <div class="toolbar-actions">
+          <select id="downloadSelect" class="download-select" aria-label="Choose GSTIN to download" hidden></select>
+          <button id="exportButton" type="button" disabled>Download Excel workbook</button>
+          <button id="clearButton" class="secondary" type="button" disabled>Clear files</button>
+        </div>
+      </div>
+      <div id="summary" class="summary-grid" hidden></div>
+      <div id="warnings" class="notice" hidden></div>
+      <div id="reconciliationAlerts" class="reconciliation-alert" role="alert" aria-live="assertive" hidden></div>
+      <div class="table-controls">
+        <label class="select-label" for="tableSelect">
+          Preview table
+          <select id="tableSelect" disabled>
+            <option value="">Process PDF files to see tables</option>
+          </select>
+        </label>
+        <label class="select-label" for="previewGstinSelect">
+          Preview GSTIN
+          <select id="previewGstinSelect" disabled>
+            <option value="__all_preview__">All GSTINs</option>
+          </select>
+        </label>
+        <span id="previewCount" class="small-note"></span>
+      </div>
+      <div id="preview" class="empty-state">Your monthly data matrix will appear here after the PDFs are processed.</div>
+      <p class="small-note">GSTR-1 and GSTR-1A worksheets include only the Total Liability row. The reconciliation compares GSTR-3B Table 3.1 (excluding inward supplies liable to reverse charge) with GSTR-1 plus GSTR-1A; financial-year totals appear before month-wise rows. If a GSTR-1 or GSTR-1A file is missing for a month, it is treated as nil so the difference is still shown. The RCM Reconciliation compares the tax amounts of GSTR-3B Table 3.1(d) with Table 4A(3); taxable value is not compared because Table 4 does not report it. GSTR-3B table worksheets retain their existing detail. Always reconcile extracted figures against the filed returns before using them for compliance or reporting.</p>
+    </section>
+
+    <section class="card" aria-labelledby="log-title">
+      <div class="toolbar">
+        <h2 id="log-title">3. Processing log</h2>
+        <div class="toolbar-actions"><button id="logExportButton" type="button" disabled>Download log (Excel)</button></div>
+      </div>
+      <p class="intro" style="margin-top:7px">File-wise status of every PDF: files that could not be read (for example scanned/image-only PDFs that need OCR, password-protected or corrupted files), files where no values were captured, and missing details. The same log is exported as the "Processing Log" sheet.</p>
+      <div id="logSummary" class="small-note" style="margin:0 0 10px"></div>
+      <div id="logView" class="empty-state">File-wise processing results will appear here.</div>
+    </section>
+
+    <footer>GSTR-1, GSTR-1A and GSTR-3B PDFs with selectable text are supported. Image-only PDFs (for example "Print to PDF" files) are read with built-in OCR, which is slower, so the log asks you to verify those figures.</footer>
+  </main>
+
+  <script>
+    "use strict";
+
+    const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const SUPPLY_COLUMNS = ["Total taxable value", "Integrated tax", "Central tax", "State/UT tax", "Cess"];
+    const TAX_COLUMNS = ["Integrated tax", "Central tax", "State/UT tax", "Cess"];
+    const GSTR1_COLUMNS = ["No. of records", "Document type", "Value", "Integrated tax", "Central tax", "State/UT tax", "Cess"];
+    function isDash(value) {
+      return typeof value === "string" && /^[-−–—]+$/.test(value.trim());
+    }
+
+    function isGstr1ColumnValue(value) {
+      const text = String(value || "").trim();
+      return isDash(text) || /^-?\d[\d,]*(?:\.\d+)?$/.test(text) ||
+        /^(?:Invoice|Note|Net|Value|Net Value|All|Documents|All Documents|NA|Document|Document\/Net|Type|records|Description|No\.|of|Integrated|Tax|Central|State\/UT|Cess)$/i.test(text);
+    }
+
+    const TABLES = [
+      {
+        key: "t31", title: "3.1 — Outward and reverse-charge supplies", tableNo: "3.1", sheet: "3.1 Supplies",
+        columns: SUPPLY_COLUMNS,
+        rows: [
+          ["(a) Outward taxable supplies (other than zero rated, nil rated and exempted)", /^\s*\(a\)\s*/i],
+          ["(b) Outward taxable supplies (zero rated)", /^\s*\(b\)\s*/i],
+          ["(c ) Other outward supplies (nil rated, exempted)", /^\s*\(c\s*\)\s*/i],
+          ["(d) Inward supplies (liable to reverse charge)", /^\s*\(d\)\s*/i],
+          ["(e) Non-GST outward supplies", /^\s*\(e\)\s*/i]
+        ],
+        start: /^3\.1\s+Details of Outward supplies/i, end: /^3\.1\.1\b/i, count: 5
+      },
+      {
+        key: "t311", title: "3.1.1 — Supplies under section 9(5)", tableNo: "3.1.1", sheet: "3.1.1 Section 9(5)",
+        columns: SUPPLY_COLUMNS,
+        rows: [
+          ["(i) Taxable supplies on which electronic commerce operator pays tax u/s 9(5) [to be furnished by electronic commerce operator]", /^\s*\([i1l|]\)\s*/i],
+          ["(ii) Taxable supplies made by registered person through electronic commerce operator, on which electronic commerce operator is required to pay tax u/s 9(5) [to be furnished by registered person making supplies through electronic commerce operator]", /^\s*\((?:ii|if|il|li|ll|1l|l1|11)\)\s*/i]
+        ],
+        start: /^3\.1\.1\b/i, end: /^3\.2\b/i, count: 5
+      },
+      {
+        key: "t32", title: "3.2 — Inter-state supplies", tableNo: "3.2", sheet: "3.2 Inter-state",
+        columns: ["Total taxable value", "Integrated tax"],
+        rows: [
+          ["Supplies made to Unregistered Persons", /^\s*Supplies made to Unregistered Persons/i],
+          ["Supplies made to Composition Taxable Persons", /^\s*Supplies made to Composition Taxable/i],
+          ["Supplies made to UIN holders", /^\s*Supplies made to UIN holders/i]
+        ],
+        start: /^3\.2\b/i, end: /^4\.\s*Eligible ITC/i, count: 2
+      },
+      {
+        key: "t4", title: "4 — Eligible ITC", tableNo: "4", sheet: "4 Eligible ITC",
+        columns: TAX_COLUMNS,
+        rows: [
+          ["(1) Import of goods", /^\s*\(?1\)?\s*Import of goods/i],
+          ["(2) Import of services", /^\s*\(?2\)?\s*Import of services/i],
+          ["(3) Inward supplies liable to reverse charge (other than 1 & 2 above)", /^\s*\(?3\)?\s*Inward supplies liable to reverse charge/i],
+          ["(4) Inward supplies from ISD", /^\s*\(?4\)?\s*Inward supplies from ISD/i],
+          ["(5) All other ITC", /^\s*\(?5\)?\s*All other ITC/i],
+          ["(1) As per rules 38,42 & 43 of CGST Rules and section 17(5)", /^\s*\(?1\)?\s*As per rules/i],
+          ["(2) Others", /^\s*\(?2\)?\s*Others/i],
+          ["C. Net ITC available (A-B)", /^\s*\(?c\)?\.?\s*Net ITC available/i],
+          ["Other Details", /^\s*\(?d\)?\s*Other Details/i],
+          ["(1) ITC reclaimed which was reversed under Table 4(B)(2) in earlier tax period", /^\s*\(?1\)?\s*ITC reclaimed/i],
+          ["(2) Ineligible ITC under section 16(4) & ITC restricted due to PoS rules", /^\s*\(?2\)?\s*Ineligible ITC/i]
+        ],
+        sections: [
+          "A.", "A.", "A.", "A.", "A.", "B.", "B.", "", "D.", "D.", "D."
+        ],
+        start: /^4\.\s*Eligible ITC/i, end: /^5\s+Values of exempt/i, count: 4
+      },
+      {
+        key: "t5", title: "5 — Exempt, nil-rated and non-GST inward supplies", tableNo: "5", sheet: "5 Exempt Inward",
+        columns: ["Inter-State supplies", "Intra-State supplies"],
+        rows: [
+          ["From a supplier under composition scheme, Exempt, Nil rated supply", /^\s*From a supplier under composition scheme/i],
+          ["Non GST supply", /^\s*Non GST supply/i]
+        ],
+        start: /^5\s+Values of exempt/i, end: /^5\.1\b/i, count: 2
+      },
+      {
+        key: "t51", title: "5.1 — Interest and late fee", tableNo: "5.1", sheet: "5.1 Interest & Fee",
+        columns: TAX_COLUMNS,
+        rows: [
+          ["System computed Interest", /^\s*System computed\b/i],
+          ["Interest Paid", /^\s*Interest Paid/i],
+          ["Late fee", /^\s*Late fee/i]
+        ],
+        start: /^5\.1\s+Interest and Late fee/i, end: /^6\.1\s+Payment of tax/i, count: 4
+      },
+      {
+        key: "t61", title: "6.1 — Payment of tax", tableNo: "6.1", sheet: "6.1 Payment",
+        columns: ["Tax payable", "Negative liability adjustment", "Net tax payable", "ITC — Integrated tax", "ITC — Central tax", "ITC — State/UT tax", "ITC — Cess", "Tax paid in cash", "Interest paid in cash", "Late fee paid in cash"],
+        rows: [
+          ["Integrated tax", null],
+          ["Central tax", null],
+          ["State/UT tax", null],
+          ["Cess", null],
+          ["Integrated tax", null],
+          ["Central tax", null],
+          ["State/UT tax", null],
+          ["Cess", null]
+        ],
+        sections: [
+          "(A) Other than reverse charge", "(A) Other than reverse charge",
+          "(A) Other than reverse charge", "(A) Other than reverse charge",
+          "(B) Reverse charge and supplies made u/s 9(5)", "(B) Reverse charge and supplies made u/s 9(5)",
+          "(B) Reverse charge and supplies made u/s 9(5)", "(B) Reverse charge and supplies made u/s 9(5)"
+        ],
+        start: /^6\.1\s+Payment of tax/i, end: /^Breakup of tax liability declared/i, count: 10
+      },
+      {
+        key: "breakup", title: "Tax liability declared (interest computation)", tableNo: "6.1", sheet: "Tax Liability Breakup",
+        columns: TAX_COLUMNS,
+        rows: [["Period", null]],
+        start: /^Breakup of tax liability declared/i, end: /^Verifi?cation:/i, count: 4
+      }
+    ];
+
+    const RECONCILIATION_MEASURES = [
+      "Taxable value", "Integrated tax", "Central tax", "State/UT tax", "Cess"
+    ];
+    const RECONCILIATION_SOURCES = [
+      "GSTR-3B Table 3.1 (excluding inward supplies liable to reverse charge)",
+      "GSTR-1 Total Liability",
+      "GSTR-1A Total Liability",
+      "GSTR-1 + GSTR-1A",
+      "Difference (3B - GSTR-1/1A)"
+    ];
+    const RECONCILIATION_TABLE = {
+      key: "reconciliation",
+      title: "GSTR-3B vs GSTR-1/1A Reconciliation",
+      sheet: "GSTR Reconciliation",
+      rows: RECONCILIATION_SOURCES
+    };
+
+    const RCM_RECONCILIATION_MEASURES = [
+      "Integrated tax", "Central tax", "State/UT tax", "Cess"
+    ];
+    const RCM_RECONCILIATION_SOURCES = [
+      "GSTR-3B Table 3.1(d) Inward supplies (liable to reverse charge)",
+      "GSTR-3B Table 4A(3) Inward supplies liable to reverse charge (other than 1 & 2 above)",
+      "Difference (3.1(d) - 4A(3))"
+    ];
+    const RCM_RECONCILIATION_TABLE = {
+      key: "rcmReconciliation",
+      title: "GSTR-3B RCM Reconciliation (Table 3.1(d) vs Table 4A(3))",
+      sheet: "RCM Reconciliation",
+      rows: RCM_RECONCILIATION_SOURCES
+    };
+    const RECONCILIATION_KEYS = ["reconciliation", "rcmReconciliation"];
+
+    const state = { returns: [], failures: [], failureDetails: [], skipped: [] };
+    const fileInput = document.getElementById("fileInput");
+    const dropZone = document.getElementById("dropZone");
+    const statusEl = document.getElementById("status");
+    const fileListEl = document.getElementById("fileList");
+    const exportButton = document.getElementById("exportButton");
+    const clearButton = document.getElementById("clearButton");
+    const tableSelect = document.getElementById("tableSelect");
+    const previewGstinSelect = document.getElementById("previewGstinSelect");
+    const previewEl = document.getElementById("preview");
+    const previewCount = document.getElementById("previewCount");
+    const downloadSelect = document.getElementById("downloadSelect");
+    const logExportButton = document.getElementById("logExportButton");
+    const ALL_GSTINS = "__all__";
+    const NO_GSTIN = "__none__";
+    const ALL_PREVIEW_GSTINS = "__all_preview__";
+
+    function getTableConfigs(returns = state.returns) {
+      const tables = [];
+      if (returns.some(item => item.formType === "GSTR-3B")) tables.push(...TABLES);
+      const dynamicTables = new Map();
+      for (const item of returns) {
+        for (const info of item.tableInfo || []) {
+          if (item.formType !== "GSTR-3B" && info.tableNo !== "Total Liability") continue;
+          let table = dynamicTables.get(info.key);
+          if (!table) {
+            table = { ...info, rows: [] };
+            dynamicTables.set(info.key, table);
+          }
+          const knownRows = new Set(table.rows.map(row => row.key));
+          for (const row of info.rows) {
+            if (!knownRows.has(row.key)) {
+              table.rows.push(row);
+              knownRows.add(row.key);
+            }
+          }
+        }
+      }
+      tables.push(...dynamicTables.values());
+      if (returns.length) tables.push(RECONCILIATION_TABLE);
+      if (returns.some(item => item.formType === "GSTR-3B")) tables.push(RCM_RECONCILIATION_TABLE);
+      return tables;
+    }
+
+    function setStatus(message, kind = "") {
+      statusEl.textContent = message;
+      statusEl.className = `status${kind ? ` ${kind}` : ""}`;
+    }
+
+    function monthIndex(name) {
+      return MONTHS.findIndex(month => month.toLowerCase() === String(name || "").toLowerCase());
+    }
+
+    function sortReturns() {
+      state.returns.sort((a, b) => a.year - b.year || a.monthIndex - b.monthIndex || a.fileName.localeCompare(b.fileName));
+    }
+
+    function lineText(item) {
+      return String(item.str || "").replace(/\s+/g, " ").trim();
+    }
+
+    async function extractLines(pdf) {
+      const lines = [];
+      const positionedItems = [];
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+        const page = await pdf.getPage(pageNumber);
+        const content = await page.getTextContent();
+        const positioned = content.items
+          .filter(item => typeof item.str === "string" && item.str.trim())
+          .map(item => ({
+            text: lineText(item),
+            x: item.transform?.[4] ?? 0,
+            y: item.transform?.[5] ?? 0,
+            pageNumber
+          }));
+        positionedItems.push(...positioned);
+        const grouped = [];
+        for (const item of positioned) {
+          let line = grouped.find(candidate => Math.abs(candidate.y - item.y) <= 2.5);
+          if (!line) {
+            line = { y: item.y, items: [] };
+            grouped.push(line);
+          }
+          line.items.push(item);
+        }
+        grouped.sort((a, b) => b.y - a.y);
+        for (const line of grouped) {
+          line.items.sort((a, b) => a.x - b.x);
+          const text = line.items.map(item => item.text).join(" ").replace(/\s+/g, " ").trim();
+          if (text) lines.push(text);
+        }
+        lines.push("");
+      }
+      return { lines, positionedItems };
+    }
+
+    function findBoundary(lines, regex, from = 0) {
+      for (let i = from; i < lines.length; i++) {
+        if (regex.test(lines[i].trim())) return i;
+      }
+      return -1;
+    }
+
+    function sectionBounds(lines, table) {
+      const start = findBoundary(lines, table.start);
+      if (start < 0) return null;
+      let end = findBoundary(lines, table.end, start + 1);
+      if (end < 0) end = lines.length;
+      return { start, end };
+    }
+
+    function valueTokens(text) {
+      const normalized = text.replace(/[−–—]/g, "-");
+      return normalized.match(/(?<![\w.])(?:-?\d[\d,]*(?:\.\d+)?|-)(?![\w.])/g) || [];
+    }
+
+    function valuesFromBlock(lines, start, end, count) {
+      const tokens = [];
+      for (let index = start; index < end; index++) {
+        tokens.push(...valueTokens(lines[index]));
+        if (tokens.length >= count) break;
+      }
+      const values = tokens.slice(-count);
+      return Array.from({ length: count }, (_, index) => {
+        const value = values[index];
+        if (value === undefined) return "";
+        if (value === "-") return "-";
+        const numeric = Number(value.replace(/,/g, ""));
+        return Number.isFinite(numeric) ? numeric : value;
+      });
+    }
+
+    function extractRows(lines, bounds, specs, count, limit = 9) {
+      if (!bounds) return specs.map(([label]) => ({ label, values: Array(count).fill("") }));
+      const startIndexes = [];
+      for (let i = bounds.start + 1; i < bounds.end; i++) {
+        const text = lines[i].trim();
+        if (!text) continue;
+        if (specs.some(([, regex]) => regex && regex.test(text)) && !startIndexes.includes(i)) startIndexes.push(i);
+      }
+      const found = new Map();
+      for (let index = 0; index < specs.length; index++) {
+        const [label, regex] = specs[index];
+        if (!regex) continue;
+        const lineIndex = startIndexes.find(i => regex.test(lines[i].trim()));
+        if (lineIndex === undefined) {
+          found.set(index, { label, values: Array(count).fill("") });
+          continue;
+        }
+        let next = startIndexes.find(i => i > lineIndex);
+        if (next === undefined) next = Math.min(bounds.end, lineIndex + limit);
+        else next = Math.min(next, lineIndex + limit);
+        found.set(index, { label, values: valuesFromBlock(lines, lineIndex, next, count) });
+      }
+      return specs.map(([, regex], index) => found.get(index) || { label: specs[index][0], values: Array(count).fill("") });
+    }
+
+    function extractPaymentRows(positionedItems, bounds, count) {
+      const empty = TABLES.find(table => table.key === "t61").rows.map(([label]) => ({ label, values: Array(count).fill("") }));
+      if (!bounds) return empty;
+      const groupNames = ["Other than reverse charge", "Reverse charge / section 9(5)"];
+      const taxLabels = [
+        ["Integrated tax", /^Integrated\b/i],
+        ["Central tax", /^Central\b/i],
+        ["State/UT tax", /^State\//i],
+        ["Cess", /^Cess\b/i]
+      ];
+      const sorted = positionedItems.slice().sort((a, b) => a.pageNumber - b.pageNumber || b.y - a.y || a.x - b.x);
+      const rowStarts = [];
+      let groupIndex = -1;
+      for (const item of sorted) {
+        const inLabel = item.col !== undefined ? item.col === 0 : item.x < 70;
+        if (inLabel && /^\(A\)/i.test(item.text)) {
+          groupIndex = 0;
+          continue;
+        }
+        if (inLabel && /^\(B\)/i.test(item.text)) {
+          groupIndex = 1;
+          continue;
+        }
+        if (groupIndex < 0 || !inLabel) continue;
+        const label = taxLabels.find(([, regex]) => regex.test(item.text));
+        if (label) rowStarts.push({ groupIndex, label: label[0], pageNumber: item.pageNumber, y: item.y, cellMode: item.col !== undefined });
+      }
+      const columnStarts = [75, 125, 175, 225, 275, 325, 375, 425, 475, 525];
+      return groupNames.flatMap((_, currentGroup) => taxLabels.map(([taxLabel]) => {
+        const row = rowStarts.find(item => item.groupIndex === currentGroup && item.label === taxLabel);
+        const values = Array(count).fill("");
+        if (row) {
+          const columns = Array.from({ length: count }, () => []);
+          for (const item of sorted) {
+            const cellMode = item.col !== undefined;
+            if (item.pageNumber !== row.pageNumber || item.y > row.y + (cellMode ? 4 : 1) || item.y < row.y - (cellMode ? 16 : 12)) continue;
+            if (cellMode ? item.col < 1 : item.x < columnStarts[0]) continue;
+            const column = cellMode ? item.col - 1 : columnStarts.findIndex((start, index) =>
+              item.x >= start && (index === columnStarts.length - 1 || item.x < columnStarts[index + 1])
+            );
+            if (column < 0 || column >= count) continue;
+            const text = item.text.replace(/\s+/g, "");
+            if (/^(?:-|-?\.\d+|-?\d[\d,]*(?:\.\d+)?|-?\d[\d,]*\.)$/.test(text)) columns[column].push(item);
+          }
+          for (let column = 0; column < count; column++) {
+            const value = columns[column].sort((a, b) => b.y - a.y || a.x - b.x).map(item => item.text.replace(/\s+/g, "")).join("");
+            if (value === "-") values[column] = "-";
+            else if (value) {
+              const numeric = Number(value.replace(/,/g, ""));
+              values[column] = Number.isFinite(numeric) ? numeric : value;
+            } else if (row.cellMode) values[column] = "-";
+          }
+        }
+        return { label: taxLabel, values };
+      }));
+    }
+
+    function extractBreakup(lines, bounds) {
+      const label = "Period";
+      if (!bounds) return [{ label, values: Array(4).fill("") }];
+      const periodLine = lines.slice(bounds.start + 1, bounds.end).find(line =>
+        MONTHS.some(month => new RegExp(`^${month}\\s+20\\d{2}\\b`, "i").test(line.trim()))
+      );
+      if (!periodLine) return [{ label, values: Array(4).fill("") }];
+      return [{
+        label,
+        values: valuesFromBlock(lines, lines.indexOf(periodLine), lines.indexOf(periodLine) + 1, 4)
+      }];
+    }
+
+    function textAfterLabel(lines, regex) {
+      const line = lines.find(value => regex.test(value.trim()));
+      return line ? line.trim().replace(regex, "").trim() : "";
+    }
+
+    function parseMetadata(lines, fileName, ocrUsed = false) {
+      const allText = lines.join(" ");
+      const filenamePeriod = fileName.match(/(?:^|_)(0?[1-9]|1[0-2])(20\d{2})(?:\.pdf)?$/i);
+      const periodLine = lines.map(line => line.trim())
+        .map(line => line.match(/^(?:Tax\s+)?Period\s+([A-Za-z]+)$/i))
+        .find(Boolean);
+      const yearText = allText.match(/\b(?:Financial\s+)?Year\s+(20\d{2})-(\d{2})\b/i);
+      let month = periodLine?.[1] || "";
+      if (!month && filenamePeriod) month = MONTHS[Number(filenamePeriod[1]) - 1];
+      const monthNumber = monthIndex(month);
+      let year = yearText
+        ? (monthNumber >= 3 ? Number(yearText[1]) : Number(`20${yearText[2]}`))
+        : 0;
+      if (!year && filenamePeriod) year = Number(filenamePeriod[2]);
+      const textGstin = allText.match(/\bGSTIN of the supplier\s+([0-9A-Z]{15})\b/i)?.[1] || allText.match(/\b\d{2}[0-9A-Z]{13}\b/)?.[0] || "";
+      const fileGstin = (fileName.match(/(?<![0-9A-Z])\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z](?![0-9A-Z])/i)?.[0] || "").toUpperCase();
+      const gstin = fileGstin && (!textGstin || (ocrUsed && textGstin !== fileGstin)) ? fileGstin : textGstin;
+      const arnDate = textAfterLabel(lines, /^\s*(?:2\s*)?\(\s*d\s*\)\.?\s*(?:(?:Date of )?ARN(?: date)?)\b/i);
+      return {
+        fileName, month: month || "Unknown month", monthIndex: monthNumber < 0 ? 99 : monthNumber,
+        year: year || 0, gstin,
+        legalName: textAfterLabel(lines, /^\s*2\s*\(a\)\.?\s*Legal name of the registered person\b/i),
+        tradeName: textAfterLabel(lines, /^\s*(?:2\s*)?\(\s*b\s*\)\.?\s*Trade name(?:,?\s*if any)?\b/i),
+        arn: textAfterLabel(lines, /^\s*(?:2\s*)?\(\s*c\s*\)\.?\s*ARN\b/i),
+        arnDate
+      };
+    }
+
+    // ---------- OCR support for image-only PDFs ----------
+    const OCR_SCALE = 3;
+    const OCR_TESSERACT_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+    const OCR_LANG_PATH = "https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng/4.0.0_best_int";
+    let ocrWorkerPromise = null;
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const element = document.createElement("script");
+        element.src = src;
+        element.onload = resolve;
+        element.onerror = () => reject(new Error(`could not load ${src}`));
+        document.head.append(element);
+      });
+    }
+
+    async function getOcrWorker() {
+      if (!ocrWorkerPromise) {
+        ocrWorkerPromise = (async () => {
+          if (!window.Tesseract) await loadScript(OCR_TESSERACT_URL);
+          const worker = await window.Tesseract.createWorker("eng", 1, { langPath: OCR_LANG_PATH });
+          await worker.setParameters({ tessedit_pageseg_mode: "6", preserve_interword_spaces: "1" });
+          return worker;
+        })();
+        ocrWorkerPromise.catch(() => { ocrWorkerPromise = null; });
+      }
+      return ocrWorkerPromise;
+    }
+
+    async function releaseOcrWorker() {
+      if (!ocrWorkerPromise) return;
+      const pending = ocrWorkerPromise;
+      ocrWorkerPromise = null;
+      try { (await pending).terminate(); } catch (error) { /* ignore */ }
+    }
+
+    // Finds the table rules (vertical segments) and erases all rules and light background/watermark
+    // so that OCR reads the numbers cleanly. rgba = canvas ImageData.data.
+    function analyseOcrImage(rgba, width, height) {
+      const total = width * height;
+      const gray = new Uint8Array(total);
+      const ink = new Uint8Array(total);
+      for (let i = 0, p = 0; i < total; i++, p += 4) {
+        const m = Math.min(rgba[p], rgba[p + 1], rgba[p + 2]);
+        gray[i] = m;
+        ink[i] = m < 110 ? 1 : 0;
+      }
+      const erase = new Uint8Array(total);
+      for (let y = 0; y < height; y++) {
+        const offset = y * width;
+        let x = 0;
+        while (x < width) {
+          if (ink[offset + x]) {
+            const start = x;
+            while (x < width && ink[offset + x]) x++;
+            if (x - start >= 60) for (let k = start; k < x; k++) erase[offset + k] = 1;
+          } else x++;
+        }
+      }
+      const raw = [];
+      for (let x = 0; x < width; x++) {
+        let y = 0;
+        while (y < height) {
+          if (ink[y * width + x]) {
+            const start = y;
+            while (y < height && ink[y * width + x]) y++;
+            if (y - start >= 40) {
+              for (let k = start; k < y; k++) erase[k * width + x] = 1;
+              raw.push({ x, y0: start, y1: y - 1 });
+            }
+          } else y++;
+        }
+      }
+      const clusters = [];
+      for (const seg of raw) {
+        const match = clusters.find(c => seg.x - c.xMax <= 2 && seg.y0 <= c.y1 + 2 && seg.y1 >= c.y0 - 2);
+        if (match) {
+          match.xMax = seg.x; match.xSum += seg.x; match.count++;
+          match.y0 = Math.min(match.y0, seg.y0); match.y1 = Math.max(match.y1, seg.y1);
+        } else clusters.push({ xMax: seg.x, xSum: seg.x, count: 1, y0: seg.y0, y1: seg.y1 });
+      }
+      const out = new Uint8Array(total);
+      for (let i = 0; i < total; i++) out[i] = gray[i] > 175 ? 255 : gray[i];
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const i = y * width + x;
+          if (!erase[i]) continue;
+          out[i] = 255;
+          if (x > 0) out[i - 1] = 255;
+          if (x < width - 1) out[i + 1] = 255;
+          if (y > 0) out[i - width] = 255;
+          if (y < height - 1) out[i + width] = 255;
+        }
+      }
+      return { gray: out, vsegs: clusters.map(c => ({ x: c.xSum / c.count, y0: c.y0, y1: c.y1 })) };
+    }
+
+    // Which table cell (column) a point falls in, using the vertical rules that cross that height.
+    function cellIndexAt(vsegs, cx, cy) {
+      const xs = vsegs.filter(seg => cy >= seg.y0 - 3 && cy <= seg.y1 + 3).map(seg => seg.x).sort((a, b) => a - b);
+      const lines = [];
+      for (const x of xs) if (!lines.length || x - lines[lines.length - 1] > 6) lines.push(x);
+      if (lines.length < 2) return { col: 0, ncols: 1 };
+      const col = Math.max(0, Math.min(lines.filter(x => x < cx).length - 1, lines.length - 2));
+      return { col, ncols: lines.length - 1 };
+    }
+
+    function ocrWordsToItems(words, vsegs, pageNumber, pageHeightPts) {
+      const items = [];
+      for (const word of words) {
+        const text = String(word.text || "").trim();
+        const box = word.bbox;
+        if (!text || !box) continue;
+        const cx = (box.x0 + box.x1) / 2;
+        const cy = (box.y0 + box.y1) / 2;
+        const { col, ncols } = cellIndexAt(vsegs, cx, cy);
+        items.push({ text, x: box.x0 / OCR_SCALE, y: pageHeightPts - cy / OCR_SCALE, pageNumber, col, ncols, cy });
+      }
+      return items;
+    }
+
+    function isDashLike(text) {
+      return /^[-–—−_~.·'"`=]+$/.test(text);
+    }
+
+    function fixNumberToken(token) {
+      let value = token;
+      if (/^[\dOolI|.,-]+$/.test(value) && /\d/.test(value)) value = value.replace(/[Oo]/g, "0").replace(/[lI|]/g, "1");
+      if (/^-?\d{3,}$/.test(value)) value = `${value.slice(0, -2)}.${value.slice(-2)}`;
+      return value;
+    }
+
+    function cleanValueCell(words) {
+      const texts = words.map(word => word.trim()).filter(Boolean);
+      if (!texts.some(text => /\d/.test(text))) return texts.every(isDashLike) ? "-" : texts.join(" ");
+      const kept = texts.filter(text => /[0-9A-Za-z]/.test(text) || /^[-−–—]$/.test(text));
+      const merged = [];
+      for (let i = 0; i < kept.length; i++) {
+        if (/^[-−–—]$/.test(kept[i]) && i + 1 < kept.length && /\d/.test(kept[i + 1])) merged.push(`-${kept[i + 1]}`), i++;
+        else if (/[0-9A-Za-z]/.test(kept[i])) merged.push(kept[i]);
+      }
+      return merged.map(fixNumberToken).join(" ");
+    }
+
+    function ocrRowText(items) {
+      const sorted = items.slice().sort((a, b) => a.x - b.x);
+      const ncols = Math.max(...sorted.map(item => item.ncols || 1));
+      const cells = Array.from({ length: ncols }, () => []);
+      for (const item of sorted) cells[Math.min(item.col || 0, ncols - 1)].push(item.text);
+      const tabular = ncols >= 3;
+      const hasValue = tabular && cells.slice(1).some(words => words.some(word => /\d/.test(word) || isDashLike(word)));
+      return cells
+        .map((words, index) => (!tabular || index === 0 || !hasValue) ? words.join(" ") : cleanValueCell(words))
+        .filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+    }
+
+    function ocrItemsToLines(items) {
+      const sorted = items.slice().sort((a, b) => a.cy - b.cy || a.x - b.x);
+      const rows = [];
+      for (const item of sorted) {
+        const row = rows[rows.length - 1];
+        if (row && Math.abs(row.cy - item.cy) <= 8) {
+          row.items.push(item);
+          row.cy = (row.cy * (row.items.length - 1) + item.cy) / row.items.length;
+        } else rows.push({ cy: item.cy, items: [item] });
+      }
+      return rows.map(row => ocrRowText(row.items)).filter(Boolean);
+    }
+
+    async function ocrExtract(pdf, onProgress) {
+      onProgress?.(0, pdf.numPages);
+      const worker = await getOcrWorker();
+      const lines = [];
+      const positionedItems = [];
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+        onProgress?.(pageNumber, pdf.numPages);
+        const page = await pdf.getPage(pageNumber);
+        const base = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({ scale: OCR_SCALE });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        context.fillStyle = "#fff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: context, viewport }).promise;
+        const image = context.getImageData(0, 0, canvas.width, canvas.height);
+        const { gray, vsegs } = analyseOcrImage(image.data, canvas.width, canvas.height);
+        for (let i = 0, p = 0; i < gray.length; i++, p += 4) {
+          image.data[p] = image.data[p + 1] = image.data[p + 2] = gray[i];
+          image.data[p + 3] = 255;
+        }
+        context.putImageData(image, 0, 0);
+        const { data } = await worker.recognize(canvas, {}, { blocks: true });
+        let words = data.words;
+        if (!words) {
+          words = [];
+          for (const block of data.blocks || []) for (const para of block.paragraphs || []) for (const line of para.lines || []) words.push(...line.words);
+        }
+        const items = ocrWordsToItems(words, vsegs, pageNumber, base.height);
+        positionedItems.push(...items);
+        lines.push(...ocrItemsToLines(items), "");
+        canvas.width = canvas.height = 0;
+      }
+      return { lines, positionedItems };
+    }
+
+    async function loadPdfLibrary() {
+      const pdfjs = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs");
+      pdfjs.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
+      return pdfjs;
+    }
+
+    async function parsePdf(file, pdfjs, onOcrProgress) {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const pdf = await pdfjs.getDocument({ data: bytes }).promise;
+      let extracted = await extractLines(pdf);
+      let ocrUsed = false;
+      if (!extracted.positionedItems.length || !extracted.lines.some(line => line.trim())) {
+        try {
+          extracted = await ocrExtract(pdf, onOcrProgress);
+        } catch (error) {
+          throw new Error(`Scanned/image-only PDF and the OCR engine failed (internet access is needed the first time): ${error?.message || "unknown error"}`);
+        }
+        if (!extracted.positionedItems.length) throw new Error("Scanned/image-only PDF - OCR could not read any text");
+        ocrUsed = true;
+      }
+      return parseExtracted(extracted, file.name, pdf.numPages, ocrUsed);
+    }
+
+    function formatAmount(value) {
+      return Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function crossChecks(tables) {
+      const messages = [];
+      const num = value => (typeof value === "number" && Number.isFinite(value) ? value : value === "-" ? 0 : null);
+      const t4 = tables.t4;
+      if (t4 && t4.length >= 8) {
+        for (let column = 0; column < TAX_COLUMNS.length; column++) {
+          const a = [0, 1, 2, 3, 4].map(index => num(t4[index].values[column]));
+          const b = [5, 6].map(index => num(t4[index].values[column]));
+          const c = num(t4[7].values[column]);
+          if ([...a, ...b, c].some(value => value === null)) continue;
+          const expected = a.reduce((x, y) => x + y, 0) - b.reduce((x, y) => x + y, 0);
+          if (Math.abs(expected - c) > 1) messages.push(`Check failed - Table 4: Net ITC (C) ${formatAmount(c)} differs from A - B ${formatAmount(expected)} for ${TAX_COLUMNS[column]}`);
+        }
+      }
+      const t61 = tables.t61;
+      if (t61 && t61.length === 8) {
+        t61.forEach((row, index) => {
+          const net = num(row.values[2]);
+          const parts = [3, 4, 5, 6, 7].map(column => num(row.values[column]));
+          if (net === null || parts.some(value => value === null)) return;
+          const paid = parts.reduce((x, y) => x + y, 0);
+          if (Math.abs(net - paid) > 1) {
+            const group = index < 4 ? "(A)" : "(B)";
+            messages.push(`Check failed - Table 6.1 ${group} ${row.label}: ITC + cash ${formatAmount(paid)} differs from net tax payable ${formatAmount(net)}`);
+          }
+        });
+      }
+      return messages;
+    }
+
+    function parseExtracted(extracted, fileName, pageCount, ocrUsed) {
+      const { lines, positionedItems } = extracted;
+      const ocrNotes = ocrUsed ? ["Read using OCR (image-only PDF) - verify the figures against the filed return"] : [];
+      const metadata = parseMetadata(lines, fileName, ocrUsed);
+      const allText = lines.join(" ").toUpperCase();
+      if (allText.includes("FORM GSTR-1A")) {
+        const parsed = parseGstr1Return(lines, positionedItems, "GSTR-1A");
+        return { ...metadata, ...parsed, formType: "GSTR-1A", missingTables: parsed.tableInfo.length ? [] : ["GSTR-1A tables"], notes: ocrUsed ? [...ocrNotes, "OCR reading is tested for GSTR-3B only; GSTR-1A values need extra checking"] : [], pageCount };
+      }
+      if (allText.includes("FORM GSTR-1") && !allText.includes("FORM GSTR-3B")) {
+        const parsed = parseGstr1Return(lines, positionedItems, "GSTR-1");
+        return { ...metadata, ...parsed, formType: "GSTR-1", missingTables: parsed.tableInfo.length ? [] : ["GSTR-1 tables"], notes: ocrUsed ? [...ocrNotes, "OCR reading is tested for GSTR-3B only; GSTR-1 values need extra checking"] : [], pageCount };
+      }
+      const tables = {};
+      for (const table of TABLES) {
+        const bounds = sectionBounds(lines, table);
+        if (table.key === "t61") tables[table.key] = extractPaymentRows(positionedItems, bounds, table.count);
+        else if (table.key === "breakup") tables[table.key] = extractBreakup(lines, bounds);
+        else tables[table.key] = extractRows(lines, bounds, table.rows, table.count);
+      }
+      const missingTables = TABLES.filter(table => {
+        const rows = tables[table.key] || [];
+        return !rows.length || rows.every(row => row.values.every(value => value === ""));
+      }).map(table => table.title);
+      const notes = [
+        ...ocrNotes,
+        ...(allText.includes("GSTR-3B") ? [] : ["Form type not recognised from the PDF text; parsed as GSTR-3B"]),
+        ...crossChecks(tables)
+      ];
+      return { ...metadata, tables, formType: "GSTR-3B", missingTables, notes, pageCount };
+    }
+
+    function parseGstr1Return(lines, positionedItems, formType) {
+      const sorted = positionedItems.slice().sort((a, b) => a.pageNumber - b.pageNumber || b.y - a.y || a.x - b.x);
+      const rowGroups = [];
+      for (const item of sorted) {
+        let row = rowGroups.find(candidate =>
+          candidate.pageNumber === item.pageNumber && Math.abs(candidate.y - item.y) <= 2.5
+        );
+        if (!row) {
+          row = { pageNumber: item.pageNumber, y: item.y, items: [] };
+          rowGroups.push(row);
+        }
+        row.items.push(item);
+      }
+      rowGroups.sort((a, b) => a.pageNumber - b.pageNumber || b.y - a.y);
+
+      const tables = {};
+      const tableInfo = new Map();
+      const contextualTables = new Set(["9A", "9B", "9C", "14A"]);
+      let currentKey = "";
+      let currentTableNo = "";
+      let currentContext = "";
+
+      for (const row of rowGroups) {
+        row.items.sort((a, b) => a.x - b.x);
+        const text = row.items.map(item => item.text).join(" ").replace(/\s+/g, " ").trim();
+        if (/^Verifi?cation:/i.test(text)) {
+          currentKey = "";
+          currentTableNo = "";
+          currentContext = "";
+          continue;
+        }
+        const heading = text.match(/^([\dA-Z(), ]+?)\s*[-–]\s*(.+)$/i);
+        if (heading && /^\d/.test(heading[1].trim())) {
+          currentTableNo = heading[1].trim().replace(/\s+/g, " ");
+          currentKey = `${formType}|${currentTableNo}`;
+          currentContext = contextualTables.has(currentTableNo.replace(/\s+/g, "")) ? heading[2].trim() : "";
+          if (!tableInfo.has(currentKey)) {
+            tableInfo.set(currentKey, {
+              key: currentKey,
+              tableNo: currentTableNo,
+              title: `${formType} — ${currentTableNo}`,
+              sheet: `${formType} ${currentTableNo}`,
+              dynamic: true,
+              rows: []
+            });
+            tables[currentKey] = [];
+          }
+          continue;
+        }
+
+        if (/^Total Liability\b/i.test(text)) {
+          currentTableNo = "Total Liability";
+          currentKey = `${formType}|${currentTableNo}`;
+          currentContext = "";
+          if (!tableInfo.has(currentKey)) {
+            tableInfo.set(currentKey, {
+              key: currentKey,
+              tableNo: currentTableNo,
+              title: `${formType} — ${currentTableNo}`,
+              sheet: `${formType} Total Liability`,
+              dynamic: true,
+              rows: []
+            });
+            tables[currentKey] = [];
+          }
+        }
+
+        if (!currentKey) continue;
+
+        const dataItems = row.items.filter(item => item.x >= 260 && isGstr1ColumnValue(item.text));
+        const fields = Array(GSTR1_COLUMNS.length).fill("");
+        const buckets = Array.from({ length: GSTR1_COLUMNS.length }, () => []);
+        let hasDecimalValue = false;
+        for (const item of dataItems) {
+          const column = item.x < 320 ? 0
+            : item.x < 390 ? 1
+            : item.x < 470 ? 2
+            : item.x < 555 ? 3
+            : item.x < 640 ? 4
+            : item.x < 735 ? 5 : 6;
+          buckets[column].push(item.text.trim());
+        }
+        for (let column = 0; column < buckets.length; column++) {
+          const values = buckets[column].filter(value => value && value !== ".");
+          if (column === 1) {
+            const text = values.join(" ").trim();
+            fields[column] = isDash(text) ? "-" : text;
+            continue;
+          }
+          const token = values.join("").replace(/,/g, "").trim().replace(/[−–—]/g, "-");
+          if (/^-+$/.test(token)) fields[column] = "-";
+          else if (/^-?\d+(?:\.\d+)?$/.test(token)) {
+            fields[column] = Number(token);
+            if (column >= 2 && /[.,]/.test(values.join(""))) hasDecimalValue = true;
+          }
+        }
+        const hasData = hasDecimalValue ||
+          (typeof fields[0] === "number" && typeof fields[1] === "string" && fields[1] !== "" && !isDash(fields[1]));
+        const leftText = row.items
+          .filter(item => !hasData || item.x < 260)
+          .map(item => item.text.trim())
+          .filter(Boolean)
+          .join(" ")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        if (!hasData) {
+          if (contextualTables.has(currentTableNo.replace(/\s+/g, "")) && leftText &&
+              !/^(?:Description|No\.? of|records|Document|Type|Value|Integrated|Central|State\/UT|Cess|Unregistered Type|FINAL|FILED|IP Address)\b/i.test(leftText)) {
+            currentContext = /^[a-z]/.test(leftText) && currentContext
+              ? `${currentContext} ${leftText}`
+              : leftText;
+          }
+          continue;
+        }
+
+        let particular = leftText || currentContext || "Total";
+        if (leftText && currentContext && contextualTables.has(currentTableNo.replace(/\s+/g, ""))) {
+          particular = `${currentContext} — ${leftText}`;
+        }
+        const rowKey = particular.toLocaleLowerCase();
+        if (!tables[currentKey].some(existing => existing.key === rowKey)) {
+          tables[currentKey].push({ key: rowKey, particular, values: fields });
+        } else {
+          const existing = tables[currentKey].find(candidate => candidate.key === rowKey);
+          existing.values = fields.map((value, index) => value === "" ? existing.values[index] : value);
+        }
+      }
+
+      return {
+        tables,
+        tableInfo: [...tableInfo.values()].map(table => ({
+          ...table,
+          rows: tables[table.key].map(({ key, particular }) => ({ key, particular }))
+        }))
+      };
+    }
+
+    function renderFiles(files) {
+      fileListEl.textContent = `${files.length} PDF file${files.length === 1 ? "" : "s"} selected`;
+    }
+
+    function renderSummary() {
+      const summary = document.getElementById("summary");
+      const warnings = document.getElementById("warnings");
+      const reconciliationAlerts = document.getElementById("reconciliationAlerts");
+      if (!state.returns.length) {
+        summary.hidden = true;
+        warnings.hidden = true;
+        reconciliationAlerts.hidden = true;
+        reconciliationAlerts.replaceChildren();
+        return;
+      }
+      const gstins = [...new Set(state.returns.map(item => item.gstin).filter(Boolean))];
+      const forms = [...new Set(state.returns.map(item => item.formType))];
+      summary.replaceChildren();
+      [
+        ["Returns processed", String(state.returns.length)],
+        ["GSTINs found", gstins.join(", ") || "Not detected"],
+        ["Return forms", forms.join(", ")]
+      ].forEach(([label, value]) => {
+        const box = document.createElement("div");
+        box.className = "summary-item";
+        const caption = document.createElement("span");
+        caption.textContent = label;
+        const content = document.createElement("strong");
+        content.textContent = value;
+        box.append(caption, content);
+        summary.append(box);
+      });
+      summary.hidden = false;
+      const issues = [];
+      if (state.failures.length) issues.push(`Could not read: ${state.failures.join("; ")}`);
+      const missing = state.returns.flatMap(item => item.missingTables.map(title => `${item.month} ${item.year}: ${title}`));
+      if (missing.length) issues.push(`No values detected in: ${missing.join("; ")}`);
+      if (gstins.length > 1) issues.push(`Multiple GSTINs detected (${gstins.join(", ")}); financial-year totals are calculated separately for each GSTIN.`);
+      const seen = new Set();
+      const duplicates = state.returns.filter(item => {
+        const key = `${item.formType || "GSTR-3B"}|${item.gstin || ""}|${item.year}-${item.monthIndex}`;
+        if (seen.has(key)) return true;
+        seen.add(key);
+        return false;
+      });
+      if (duplicates.length) issues.push(`Duplicate tax period(s) detected: ${duplicates.map(item => `${item.formType || "GSTR-3B"} ${item.month} ${item.year} (${item.gstin || "GSTIN not detected"})`).join(", ")}.`);
+      warnings.textContent = issues.join(" ");
+      warnings.hidden = !issues.length;
+
+      const hasDifference = (row, headers) => headers.slice(3).some((_, index) =>
+        typeof row[index + 3] === "number" && Math.round(Math.abs(row[index + 3]) * 100) > 0
+      );
+      const sections = [
+        { label: "GSTR-3B vs GSTR-1/1A", matrix: reconciliationMatrix(state.returns) },
+        { label: "RCM: Table 3.1(d) vs Table 4A(3)", matrix: rcmReconciliationMatrix(state.returns) }
+      ].map(({ label, matrix }) => {
+        const periodIndex = matrix.headers.indexOf("Tax period");
+        const gstinIndex = matrix.headers.indexOf("GSTIN");
+        const particularsIndex = matrix.headers.indexOf("Particulars");
+        const rows = matrix.rows.filter(row =>
+          /^Difference\b/i.test(String(row[particularsIndex] || "")) &&
+          !/\bTotal\b/i.test(String(row[periodIndex] || "")) &&
+          hasDifference(row, matrix.headers)
+        );
+        return { label, matrix, periodIndex, gstinIndex, rows };
+      }).filter(section => section.rows.length);
+      reconciliationAlerts.replaceChildren();
+      if (sections.length) {
+        for (const section of sections) {
+          const heading = document.createElement("strong");
+          heading.textContent = `${section.label} reconciliation differences found in ${section.rows.length} GSTIN/month combination${section.rows.length === 1 ? "" : "s"}:`;
+          const list = document.createElement("ul");
+          for (const row of section.rows) {
+            const item = document.createElement("li");
+            const differingMeasures = section.matrix.headers.slice(3).filter((_, index) =>
+              typeof row[index + 3] === "number" && Math.round(Math.abs(row[index + 3]) * 100) > 0
+            );
+            item.textContent = `${row[section.periodIndex]} — ${row[section.gstinIndex] || "GSTIN not detected"} (${differingMeasures.join(", ")})`;
+            list.append(item);
+          }
+          reconciliationAlerts.append(heading, list);
+        }
+        reconciliationAlerts.hidden = false;
+      } else {
+        reconciliationAlerts.hidden = true;
+      }
+    }
+
+    function cellText(value) {
+      if (value === "" || value === null || value === undefined) return "";
+      return typeof value === "number" ? value : String(value);
+    }
+
+    function financialYear(item) {
+      if (!item.year || item.monthIndex > 11) return { key: "unknown", label: "Financial year unavailable" };
+      const startYear = item.monthIndex >= 3 ? item.year : item.year - 1;
+      return {
+        key: String(startYear),
+        label: `FY ${startYear}-${String(startYear + 1).slice(-2)}`
+      };
+    }
+
+    function particularFor(table, index) {
+      const particular = table.rows[index][0];
+      const section = table.sections?.[index] || "";
+      if (table.key === "t4" && section) return `${section} ${particular}`;
+      if (table.key === "t61" && section) return `${section} — ${particular}`;
+      return particular;
+    }
+
+    function addPeriodBlankRows(matrix) {
+      const periodIndex = matrix.headers.indexOf("Tax period");
+      if (periodIndex < 0) return matrix;
+      const rows = [];
+      let previousPeriod = null;
+      for (const row of matrix.rows) {
+        const period = String(row[periodIndex] ?? "");
+        if (previousPeriod !== null && period !== previousPeriod) {
+          rows.push(Array(matrix.headers.length).fill(""));
+        }
+        rows.push(row);
+        previousPeriod = period;
+      }
+      return { ...matrix, rows };
+    }
+
+    function tableMatrix(table, returns) {
+      if (table.key === "reconciliation") return reconciliationMatrix(returns);
+      if (table.key === "rcmReconciliation") return rcmReconciliationMatrix(returns);
+      returns = returns.filter(item => table.dynamic
+        ? Boolean(item.tables[table.key])
+        : item.formType === "GSTR-3B");
+      if (table.dynamic) return dynamicTableMatrix(table, returns);
+      const hasParticulars = table.key !== "breakup";
+      const headers = ["Tax period", "GSTIN", "Table No."];
+      if (hasParticulars) headers.push("Particulars");
+      headers.push(...table.columns);
+      const rows = [];
+      const groups = new Map();
+      for (const item of returns) {
+        const year = financialYear(item);
+        const gstin = item.gstin || "";
+        const key = `${year.key}\u0000${gstin}`;
+        if (!groups.has(key)) groups.set(key, { ...year, gstin, returns: [] });
+        groups.get(key).returns.push(item);
+      }
+
+      for (const group of groups.values()) {
+        for (let index = 0; index < table.rows.length; index++) {
+          const particulars = particularFor(table, index);
+          const totals = Array(table.columns.length).fill(0);
+          const hasValue = Array(table.columns.length).fill(false);
+          for (const item of group.returns) {
+            const parsedRow = item.tables[table.key]?.[index];
+            for (let column = 0; column < table.columns.length; column++) {
+              const value = parsedRow?.values[column];
+              if (typeof value === "number" && Number.isFinite(value)) {
+                totals[column] += value;
+                hasValue[column] = true;
+              } else if (value === "-") {
+                hasValue[column] = true;
+              }
+            }
+          }
+          const periods = new Set(group.returns.map(item => `${item.year}-${item.monthIndex}`)).size;
+          const row = [
+            `${group.label} Total (${periods}/12 months)`,
+            group.gstin,
+            table.tableNo
+          ];
+          if (hasParticulars) row.push(particulars);
+          row.push(...totals.map((total, column) => hasValue[column] ? Number(total.toFixed(2)) : ""));
+          rows.push(row);
+        }
+
+        for (const item of group.returns) {
+          for (let index = 0; index < table.rows.length; index++) {
+            const parsedRow = item.tables[table.key]?.[index];
+            const values = [
+              item.month + (item.year ? ` ${item.year}` : ""),
+              item.gstin,
+              table.tableNo
+            ];
+            if (hasParticulars) values.push(particularFor(table, index));
+            for (let column = 0; column < table.columns.length; column++) {
+              values.push(cellText(parsedRow?.values[column]));
+            }
+            rows.push(values);
+          }
+        }
+      }
+      return addPeriodBlankRows({ headers, rows });
+    }
+
+    function dynamicTableMatrix(table, returns) {
+      const headers = ["Tax period", "GSTIN", "Table No.", "Particulars", ...GSTR1_COLUMNS];
+      const rows = [];
+      const groups = new Map();
+      for (const item of returns) {
+        const sourceRows = item.tables[table.key];
+        if (!sourceRows) continue;
+        const year = financialYear(item);
+        const key = `${year.key}\u0000${item.gstin || ""}`;
+        if (!groups.has(key)) groups.set(key, { ...year, gstin: item.gstin || "", returns: [] });
+        groups.get(key).returns.push(item);
+      }
+
+      for (const group of groups.values()) {
+        for (const definition of table.rows) {
+          const totals = Array(GSTR1_COLUMNS.length).fill(0);
+          const hasValue = Array(GSTR1_COLUMNS.length).fill(false);
+          const documentTypes = new Set();
+          for (const item of group.returns) {
+            const sourceRow = item.tables[table.key]?.find(row => row.key === definition.key);
+            for (let column = 0; column < GSTR1_COLUMNS.length; column++) {
+              const value = sourceRow?.values[column];
+              if (column === 1 && typeof value === "string" && !isDash(value)) {
+                documentTypes.add(value);
+              } else if (typeof value === "number" && Number.isFinite(value)) {
+                totals[column] += value;
+                hasValue[column] = true;
+              } else if (isDash(value)) {
+                hasValue[column] = true;
+              }
+            }
+          }
+          const periodCount = new Set(group.returns.map(item => `${item.year}-${item.monthIndex}`)).size;
+          const annual = [
+            `${group.label} Total (${periodCount}/12 months)`,
+            group.gstin,
+            table.tableNo,
+            definition.particular
+          ];
+          annual.push(...totals.map((total, column) => {
+            if (column === 1) return documentTypes.size === 1 ? [...documentTypes][0] : documentTypes.size ? "" : hasValue[column] ? 0 : "";
+            return hasValue[column] ? Number(total.toFixed(2)) : "";
+          }));
+          rows.push(annual);
+        }
+
+        for (const item of group.returns) {
+          for (const definition of table.rows) {
+            const sourceRow = item.tables[table.key]?.find(row => row.key === definition.key);
+            rows.push([
+              `${item.month} ${item.year || ""}`.trim(),
+              item.gstin,
+              table.tableNo,
+              definition.particular,
+              ...(sourceRow?.values || Array(GSTR1_COLUMNS.length).fill(""))
+            ]);
+          }
+        }
+      }
+      return addPeriodBlankRows({ headers, rows });
+    }
+
+    function reconciliationAmounts(item) {
+      if (!item) return null;
+      if (item.formType === "GSTR-3B") {
+        const table = TABLES.find(candidate => candidate.key === "t31");
+        const rows = item.tables.t31;
+        if (!rows) return null;
+        const totals = Array(SUPPLY_COLUMNS.length).fill(0);
+        for (let index = 0; index < table.rows.length; index++) {
+          if (/^\(d\)/i.test(table.rows[index][0])) continue;
+          for (let column = 0; column < totals.length; column++) {
+            const value = rows[index]?.values[column];
+            if (typeof value === "number" && Number.isFinite(value)) totals[column] += value;
+          }
+        }
+        return totals;
+      }
+
+      const row = item.tables[`${item.formType}|Total Liability`]?.[0];
+      if (!row) return null;
+      return row.values.slice(2, 7).map(value =>
+        typeof value === "number" && Number.isFinite(value) ? value : 0
+      );
+    }
+
+    function reconciliationMatrix(returns) {
+      const headers = [
+        "Tax period", "GSTIN", "Particulars", ...RECONCILIATION_MEASURES
+      ];
+      const groups = new Map();
+      for (const item of returns) {
+        const year = financialYear(item);
+        const gstin = item.gstin || "";
+        const groupKey = `${year.key}\u0000${gstin}`;
+        if (!groups.has(groupKey)) groups.set(groupKey, { ...year, gstin, months: new Map() });
+        const monthKey = `${item.year}-${item.monthIndex}`;
+        if (!groups.get(groupKey).months.has(monthKey)) {
+          groups.get(groupKey).months.set(monthKey, {
+            year: item.year,
+            monthIndex: item.monthIndex,
+            month: item.month,
+            returns: {}
+          });
+        }
+        groups.get(groupKey).months.get(monthKey).returns[item.formType] = item;
+      }
+
+      const rows = [];
+      let annualRowCount = 0;
+      for (const group of groups.values()) {
+        const months = [...group.months.values()]
+          .sort((a, b) => a.year - b.year || a.monthIndex - b.monthIndex)
+          .map(period => {
+            const gstr3b = reconciliationAmounts(period.returns["GSTR-3B"]);
+            const gstr1 = reconciliationAmounts(period.returns["GSTR-1"]);
+            const gstr1a = reconciliationAmounts(period.returns["GSTR-1A"]);
+            const combined = RECONCILIATION_MEASURES.map((_, index) => (gstr1?.[index] || 0) + (gstr1a?.[index] || 0));
+            const difference = RECONCILIATION_MEASURES.map((_, index) => (gstr3b?.[index] || 0) - combined[index]);
+            return { ...period, gstr3b, gstr1, gstr1a, combined, difference };
+          });
+        const annualLabel = `${group.label} Total (${months.length}/12 months)`;
+
+        const annualTotals = RECONCILIATION_SOURCES.map((_, sourceIndex) =>
+          RECONCILIATION_MEASURES.map((_, measureIndex) => {
+            let total = null;
+            for (const period of months) {
+              if (!period.difference) continue;
+              const sources = [period.gstr3b, period.gstr1, period.gstr1a, period.combined, period.difference];
+              const value = sources[sourceIndex]?.[measureIndex];
+              if (value !== undefined) total = (total || 0) + value;
+            }
+            return total === null ? "" : Number(total.toFixed(2));
+          })
+        );
+        for (let sourceIndex = 0; sourceIndex < RECONCILIATION_SOURCES.length; sourceIndex++) {
+          rows.push([annualLabel, group.gstin, RECONCILIATION_SOURCES[sourceIndex], ...annualTotals[sourceIndex]]);
+          annualRowCount++;
+        }
+
+        for (const period of months) {
+          const sources = [period.gstr3b, period.gstr1, period.gstr1a, period.combined, period.difference];
+          for (let sourceIndex = 0; sourceIndex < RECONCILIATION_SOURCES.length; sourceIndex++) {
+            const values = RECONCILIATION_MEASURES.map((_, measureIndex) =>
+              sources[sourceIndex]?.[measureIndex] === undefined
+                ? ""
+                : Number(sources[sourceIndex][measureIndex].toFixed(2))
+            );
+            rows.push([
+              `${period.month} ${period.year || ""}`.trim(),
+              group.gstin,
+              RECONCILIATION_SOURCES[sourceIndex],
+              ...values
+            ]);
+          }
+        }
+      }
+      return addPeriodBlankRows({ headers, rows, annualRowCount });
+    }
+
+    function rcmReconciliationAmounts(item) {
+      if (!item || item.formType !== "GSTR-3B") return null;
+      const t31Table = TABLES.find(candidate => candidate.key === "t31");
+      const t4Table = TABLES.find(candidate => candidate.key === "t4");
+      const t31Rows = item.tables.t31;
+      const t4Rows = item.tables.t4;
+      if (!t31Rows || !t4Rows) return null;
+      const t31Index = t31Table.rows.findIndex(row => /^\(d\)/i.test(row[0]));
+      const t4Index = t4Table.rows.findIndex(row => /^\(3\)\s*Inward supplies liable to reverse charge/i.test(row[0]));
+      const number = value => typeof value === "number" && Number.isFinite(value) ? value : 0;
+      // Table 3.1(d) columns: taxable value, IGST, CGST, SGST, Cess -> skip taxable value (Table 4 has none)
+      const outward = RCM_RECONCILIATION_MEASURES.map((_, column) => number(t31Rows[t31Index]?.values[column + 1]));
+      const itc = RCM_RECONCILIATION_MEASURES.map((_, column) => number(t4Rows[t4Index]?.values[column]));
+      return { outward, itc, difference: outward.map((value, column) => value - itc[column]) };
+    }
+
+    function rcmReconciliationMatrix(returns) {
+      const headers = ["Tax period", "GSTIN", "Particulars", ...RCM_RECONCILIATION_MEASURES];
+      const groups = new Map();
+      for (const item of returns) {
+        if (item.formType !== "GSTR-3B") continue;
+        const year = financialYear(item);
+        const gstin = item.gstin || "";
+        const groupKey = `${year.key}\u0000${gstin}`;
+        if (!groups.has(groupKey)) groups.set(groupKey, { ...year, gstin, months: new Map() });
+        const amounts = rcmReconciliationAmounts(item);
+        if (!amounts) continue;
+        groups.get(groupKey).months.set(`${item.year}-${item.monthIndex}`, {
+          year: item.year, monthIndex: item.monthIndex, month: item.month, amounts
+        });
+      }
+      const rows = [];
+      let annualRowCount = 0;
+      const rowFor = (label, gstin, amounts) => RCM_RECONCILIATION_SOURCES.map((source, sourceIndex) => [
+        label, gstin, source,
+        ...RCM_RECONCILIATION_MEASURES.map((_, measureIndex) => {
+          const value = [amounts.outward, amounts.itc, amounts.difference][sourceIndex][measureIndex];
+          return Number(value.toFixed(2));
+        })
+      ]);
+      for (const group of groups.values()) {
+        const months = [...group.months.values()].sort((a, b) => a.year - b.year || a.monthIndex - b.monthIndex);
+        if (!months.length) continue;
+        const total = { outward: Array(4).fill(0), itc: Array(4).fill(0), difference: Array(4).fill(0) };
+        for (const period of months) {
+          for (const key of ["outward", "itc", "difference"]) {
+            period.amounts[key].forEach((value, index) => { total[key][index] += value; });
+          }
+        }
+        const annualRows = rowFor(`${group.label} Total (${months.length}/12 months)`, group.gstin, total);
+        rows.push(...annualRows);
+        annualRowCount += annualRows.length;
+        for (const period of months) {
+          rows.push(...rowFor(`${period.month} ${period.year || ""}`.trim(), group.gstin, period.amounts));
+        }
+      }
+      return addPeriodBlankRows({ headers, rows, annualRowCount });
+    }
+
+    function renderPreview() {
+      const key = tableSelect.value;
+      const table = getTableConfigs().find(item => item.key === key);
+      if (!table || !state.returns.length) {
+        previewEl.className = "empty-state";
+        previewEl.textContent = "Your monthly data matrix will appear here after the PDFs are processed.";
+        previewCount.textContent = "";
+        return;
+      }
+      const selectedGstin = previewGstinSelect.value || ALL_PREVIEW_GSTINS;
+      const previewReturns = selectedGstin === ALL_PREVIEW_GSTINS
+        ? state.returns
+        : state.returns.filter(item => (item.gstin || NO_GSTIN) === selectedGstin);
+      const matrix = tableMatrix(table, previewReturns);
+      const wrap = document.createElement("div");
+      wrap.className = "table-wrap";
+      const htmlTable = document.createElement("table");
+      const head = document.createElement("thead");
+      const headRow = document.createElement("tr");
+      matrix.headers.forEach(label => {
+        const cell = document.createElement("th");
+        cell.scope = "col";
+        cell.textContent = label;
+        headRow.append(cell);
+      });
+      head.append(headRow);
+      const body = document.createElement("tbody");
+      matrix.rows.forEach(row => {
+        const tr = document.createElement("tr");
+        row.forEach((value, index) => {
+          const cell = document.createElement("td");
+          cell.textContent = value === "" ? "—" : value;
+          if (value === "") cell.className = "empty";
+          if (index === 0) cell.title = value;
+          tr.append(cell);
+        });
+        body.append(tr);
+      });
+      htmlTable.append(head, body);
+      wrap.append(htmlTable);
+      previewEl.className = "";
+      previewEl.replaceChildren(wrap);
+      let totalRows;
+      if (RECONCILIATION_KEYS.includes(table.key)) {
+        totalRows = matrix.annualRowCount;
+      } else {
+        const tableReturns = previewReturns.filter(item => table.dynamic
+          ? Boolean(item.tables[table.key])
+          : item.formType === "GSTR-3B");
+        totalRows = new Set(tableReturns.map(item => `${financialYear(item).key}\u0000${item.gstin || ""}`)).size * table.rows.length;
+      }
+      const dataRows = matrix.rows.filter(row => row.some(cell => cell !== "")).length;
+      previewCount.textContent = `${dataRows - totalRows} monthly detail rows · ${totalRows} annual total rows`;
+    }
+
+    function updateInterface() {
+      sortReturns();
+      renderSummary();
+      exportButton.disabled = state.returns.length === 0;
+      clearButton.disabled = state.returns.length === 0 && state.failures.length === 0;
+      tableSelect.disabled = state.returns.length === 0;
+      previewGstinSelect.disabled = state.returns.length === 0;
+      const previousTable = tableSelect.value;
+      tableSelect.replaceChildren();
+      for (const table of getTableConfigs()) {
+        const option = document.createElement("option");
+        option.value = table.key;
+        option.textContent = table.title;
+        tableSelect.append(option);
+      }
+      if ([...tableSelect.options].some(option => option.value === previousTable)) tableSelect.value = previousTable;
+      renderPreviewGstinOptions();
+      renderDownloadOptions();
+      renderLog();
+      renderPreview();
+    }
+
+    function periodLabel(item) {
+      return item.year && item.monthIndex <= 11 ? `${item.month} ${item.year}` : "Not detected";
+    }
+
+    function buildLogMatrix(returns = state.returns, includeFailures = true) {
+      const headers = ["File name", "Return form", "Tax period", "GSTIN", "Status", "Details", "Pages"];
+      const rows = [];
+      if (includeFailures) {
+        for (const failure of state.failureDetails) rows.push([failure.fileName, "", "", "", "Error", failure.reason, ""]);
+        for (const name of state.skipped) rows.push([name, "", "", "", "Skipped", "Not a PDF file - ignored", ""]);
+      }
+      const periodCounts = new Map();
+      for (const item of returns) {
+        const key = `${item.formType}|${item.gstin || ""}|${item.year}-${item.monthIndex}`;
+        periodCounts.set(key, (periodCounts.get(key) || 0) + 1);
+      }
+      for (const item of returns) {
+        const issues = [...(item.notes || [])];
+        if (periodLabel(item) === "Not detected") issues.push("Tax period not detected");
+        if (!item.gstin) issues.push("GSTIN not detected");
+        const missing = item.missingTables || [];
+        if (item.formType === "GSTR-3B") {
+          if (missing.length >= TABLES.length) issues.push("No values captured in any table - the file may be scanned/image-only (OCR needed) or in an unsupported layout");
+          else if (missing.length) issues.push(`No values captured in: ${missing.join(", ")}`);
+        } else {
+          if (missing.length) issues.push(`No tables captured - the file may be scanned/image-only (OCR needed) or in an unsupported layout`);
+          else if (!item.tables?.[`${item.formType}|Total Liability`]?.length) issues.push("Total Liability row not found - it cannot be used in the reconciliation");
+        }
+        if (periodCounts.get(`${item.formType}|${item.gstin || ""}|${item.year}-${item.monthIndex}`) > 1) issues.push("Duplicate tax period for this form and GSTIN");
+        rows.push([
+          item.fileName, item.formType, periodLabel(item), item.gstin || "",
+          issues.length ? "Warning" : "OK",
+          issues.length ? issues.join("; ") : "Processed successfully",
+          String(item.pageCount ?? "")
+        ]);
+      }
+      return { headers, rows, statusColumn: 4 };
+    }
+
+    function renderLog() {
+      const view = document.getElementById("logView");
+      const summary = document.getElementById("logSummary");
+      const { headers, rows } = buildLogMatrix();
+      logExportButton.disabled = !rows.length;
+      if (!rows.length) {
+        view.className = "empty-state";
+        view.textContent = "File-wise processing results will appear here.";
+        summary.textContent = "";
+        return;
+      }
+      const count = status => rows.filter(row => row[4] === status).length;
+      summary.textContent = `${count("OK")} OK · ${count("Warning")} with warnings · ${count("Error") + count("Skipped")} errors/skipped`;
+      const table = document.createElement("table");
+      table.className = "log-table";
+      const head = document.createElement("thead");
+      const headRow = document.createElement("tr");
+      headers.forEach(label => {
+        const th = document.createElement("th");
+        th.scope = "col";
+        th.textContent = label;
+        headRow.append(th);
+      });
+      head.append(headRow);
+      const body = document.createElement("tbody");
+      rows.forEach(row => {
+        const tr = document.createElement("tr");
+        row.forEach((value, index) => {
+          const td = document.createElement("td");
+          if (index === 4) {
+            const pill = document.createElement("span");
+            pill.className = `pill ${value === "OK" ? "ok" : value === "Warning" ? "warn" : "err"}`;
+            pill.textContent = value;
+            td.append(pill);
+          } else td.textContent = value === "" ? "—" : value;
+          tr.append(td);
+        });
+        body.append(tr);
+      });
+      table.append(head, body);
+      const wrap = document.createElement("div");
+      wrap.className = "table-wrap";
+      wrap.append(table);
+      view.className = "";
+      view.replaceChildren(wrap);
+    }
+
+    function renderPreviewGstinOptions() {
+      const groups = new Map();
+      for (const item of state.returns) {
+        const key = item.gstin || NO_GSTIN;
+        if (!groups.has(key)) groups.set(key, { name: item.tradeName || item.legalName || "", count: 0 });
+        const group = groups.get(key);
+        if (!group.name) group.name = item.tradeName || item.legalName || "";
+        group.count++;
+      }
+      const previous = previewGstinSelect.value;
+      previewGstinSelect.replaceChildren();
+      const add = (value, label) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        previewGstinSelect.append(option);
+      };
+      add(ALL_PREVIEW_GSTINS, `All GSTINs (${groups.size})`);
+      [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).forEach(([key, group]) => {
+        const id = key === NO_GSTIN ? "GSTIN not detected" : key;
+        add(key, `${id}${group.name ? ` — ${group.name}` : ""} (${group.count} return${group.count === 1 ? "" : "s"})`);
+      });
+      if ([...previewGstinSelect.options].some(option => option.value === previous)) {
+        previewGstinSelect.value = previous;
+      }
+    }
+
+    function renderDownloadOptions() {
+      const groups = new Map();
+      for (const item of state.returns) {
+        const key = item.gstin || NO_GSTIN;
+        if (!groups.has(key)) groups.set(key, { name: item.tradeName || item.legalName || "", count: 0 });
+        const group = groups.get(key);
+        if (!group.name) group.name = item.tradeName || item.legalName || "";
+        group.count++;
+      }
+      const previous = downloadSelect.value;
+      downloadSelect.replaceChildren();
+      if (groups.size < 2) {
+        downloadSelect.hidden = true;
+        return;
+      }
+      const add = (value, label) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        downloadSelect.append(option);
+      };
+      add(ALL_GSTINS, `All GSTINs (${groups.size}) — one workbook`);
+      [...groups.entries()].sort(([a], [b]) => a.localeCompare(b)).forEach(([key, group]) => {
+        const id = key === NO_GSTIN ? "GSTIN not detected" : key;
+        add(key, `${id}${group.name ? ` — ${group.name}` : ""} (${group.count} return${group.count === 1 ? "" : "s"})`);
+      });
+      if ([...downloadSelect.options].some(option => option.value === previous)) downloadSelect.value = previous;
+      downloadSelect.hidden = false;
+    }
+
+    function describeError(error) {
+      if (error?.name === "PasswordException") return "Password-protected PDF - remove the password and upload again";
+      if (error?.name === "InvalidPDFException") return "Invalid or corrupted PDF file";
+      return error?.message || "PDF read error";
+    }
+
+    async function processFiles(fileList) {
+      const isPdf = file => /\.pdf$/i.test(file.name) || file.type === "application/pdf";
+      const allFiles = Array.from(fileList);
+      const files = allFiles.filter(isPdf);
+      if (!files.length) {
+        setStatus("Select one or more PDF files.", "error");
+        return;
+      }
+      state.returns = [];
+      state.failures = [];
+      state.failureDetails = [];
+      state.skipped = allFiles.filter(file => !isPdf(file)).map(file => file.name);
+      renderFiles(files);
+      updateInterface();
+      exportButton.disabled = true;
+      fileInput.disabled = true;
+      setStatus(`Loading PDF text engine and processing ${files.length} file${files.length === 1 ? "" : "s"}…`);
+      try {
+        const pdfjs = await loadPdfLibrary();
+        for (let index = 0; index < files.length; index++) {
+          const file = files[index];
+          setStatus(`Reading ${index + 1} of ${files.length}: ${file.name}`);
+          try {
+            state.returns.push(await parsePdf(file, pdfjs, (page, total) => setStatus(
+              page === 0
+                ? `Image-only PDF detected - loading the OCR engine for ${file.name} (first use needs internet and may take a minute)…`
+                : `OCR: reading page ${page} of ${total} of ${file.name}… (${index + 1} of ${files.length})`
+            )));
+          } catch (error) {
+            const reason = describeError(error);
+            state.failures.push(`${file.name} (${reason})`);
+            state.failureDetails.push({ fileName: file.name, reason });
+          }
+          updateInterface();
+        }
+        if (state.returns.length) {
+          const noun = state.returns.length === 1 ? "return" : "returns";
+          setStatus(`Processed ${state.returns.length} ${noun}${state.failures.length ? `; ${state.failures.length} file${state.failures.length === 1 ? "" : "s"} could not be read` : ""}. Review the matrices before exporting.`, state.failures.length ? "error" : "success");
+        } else {
+          setStatus("No PDF could be read. Check that the files are valid and contain selectable text.", "error");
+        }
+      } catch (error) {
+        setStatus(`The PDF text engine could not be loaded. Check your internet connection and try again. Details: ${error?.message || "unknown error"}`, "error");
+      } finally {
+        fileInput.disabled = false;
+        fileInput.value = "";
+        releaseOcrWorker();
+        updateInterface();
+      }
+    }
+
+    function escapeXml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"
+      })[char]).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+    }
+
+    function columnName(number) {
+      let name = "";
+      while (number > 0) {
+        const remainder = (number - 1) % 26;
+        name = String.fromCharCode(65 + remainder) + name;
+        number = Math.floor((number - 1) / 26);
+      }
+      return name;
+    }
+
+    function worksheetXml(matrix) {
+      const allRows = [matrix.headers, ...matrix.rows];
+      const columnWidths = matrix.headers.map((_, columnIndex) => {
+        const longest = allRows.reduce((length, row) => {
+          const value = row[columnIndex];
+          return Math.max(length, String(value ?? "").length + (typeof value === "number" ? 2 : 0));
+        }, 0);
+        return Math.min(255, Math.max(8, longest + 2));
+      });
+      const columns = columnWidths.map((width, index) =>
+        `<col min="${index + 1}" max="${index + 1}" width="${width}" bestFit="1" customWidth="1"/>`
+      ).join("");
+      let content = "";
+      allRows.forEach((row, rowIndex) => {
+        const isDifferenceRow = rowIndex > 0 && /^Difference\b/i.test(String(row[2] ?? ""));
+        const cells = row.map((value, colIndex) => {
+          const ref = `${columnName(colIndex + 1)}${rowIndex + 1}`;
+          if (isDash(value)) return `<c r="${ref}" s="${isDifferenceRow ? "3" : "1"}"><v>0</v></c>`;
+          if (typeof value === "number" && Number.isFinite(value)) return `<c r="${ref}" s="${isDifferenceRow ? "3" : "1"}"><v>${value}</v></c>`;
+          const text = escapeXml(value);
+          const statusStyle = matrix.statusColumn === colIndex && rowIndex > 0 ? ({ Error: 4, Skipped: 4, OK: 5, Warning: 6 })[value] : undefined;
+          return `<c r="${ref}" s="${statusStyle ?? (isDifferenceRow ? 2 : 0)}" t="inlineStr"><is><t xml:space="preserve">${text}</t></is></c>`;
+        }).join("");
+        content += `<row r="${rowIndex + 1}">${cells}</row>`;
+      });
+      const lastColumn = columnName(Math.max(1, matrix.headers.length));
+      const lastRow = Math.max(1, allRows.length);
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${columns}</cols><sheetData>${content}</sheetData><autoFilter ref="A1:${lastColumn}${lastRow}"/></worksheet>`;
+    }
+
+    const CRC_TABLE = (() => {
+      const table = new Uint32Array(256);
+      for (let n = 0; n < 256; n++) {
+        let value = n;
+        for (let bit = 0; bit < 8; bit++) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+        table[n] = value >>> 0;
+      }
+      return table;
+    })();
+
+    function crc32(bytes) {
+      let crc = 0xffffffff;
+      for (const byte of bytes) crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+      return (crc ^ 0xffffffff) >>> 0;
+    }
+
+    function write16(view, offset, value) { view.setUint16(offset, value, true); }
+    function write32(view, offset, value) { view.setUint32(offset, value >>> 0, true); }
+
+    function makeZip(files) {
+      const encoder = new TextEncoder();
+      const localParts = [];
+      const centralParts = [];
+      let offset = 0;
+      const date = new Date();
+      const dosTime = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+      const dosDate = ((Math.max(1980, date.getFullYear()) - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
+      for (const [name, content] of files) {
+        const nameBytes = encoder.encode(name);
+        const data = encoder.encode(content);
+        const crc = crc32(data);
+        const localHeader = new Uint8Array(30 + nameBytes.length);
+        const localView = new DataView(localHeader.buffer);
+        write32(localView, 0, 0x04034b50);
+        write16(localView, 4, 20);
+        write16(localView, 6, 0x0800);
+        write16(localView, 8, 0);
+        write16(localView, 10, dosTime);
+        write16(localView, 12, dosDate);
+        write32(localView, 14, crc);
+        write32(localView, 18, data.length);
+        write32(localView, 22, data.length);
+        write16(localView, 26, nameBytes.length);
+        write16(localView, 28, 0);
+        localHeader.set(nameBytes, 30);
+        localParts.push(localHeader, data);
+
+        const centralHeader = new Uint8Array(46 + nameBytes.length);
+        const centralView = new DataView(centralHeader.buffer);
+        write32(centralView, 0, 0x02014b50);
+        write16(centralView, 4, 20);
+        write16(centralView, 6, 20);
+        write16(centralView, 8, 0x0800);
+        write16(centralView, 10, 0);
+        write16(centralView, 12, dosTime);
+        write16(centralView, 14, dosDate);
+        write32(centralView, 16, crc);
+        write32(centralView, 20, data.length);
+        write32(centralView, 24, data.length);
+        write16(centralView, 28, nameBytes.length);
+        write16(centralView, 30, 0);
+        write16(centralView, 32, 0);
+        write16(centralView, 34, 0);
+        write16(centralView, 36, 0);
+        write32(centralView, 38, 0);
+        write32(centralView, 42, offset);
+        centralHeader.set(nameBytes, 46);
+        centralParts.push(centralHeader);
+        offset += localHeader.length + data.length;
+      }
+      const centralSize = centralParts.reduce((total, part) => total + part.length, 0);
+      const end = new Uint8Array(22);
+      const endView = new DataView(end.buffer);
+      write32(endView, 0, 0x06054b50);
+      write16(endView, 4, 0);
+      write16(endView, 6, 0);
+      write16(endView, 8, files.length);
+      write16(endView, 10, files.length);
+      write32(endView, 12, centralSize);
+      write32(endView, 16, offset);
+      write16(endView, 20, 0);
+      return new Blob([...localParts, ...centralParts, end], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    }
+
+    function buildWorkbook(returns = state.returns) {
+      const sheets = [];
+      const metadataHeaders = ["Return form", "Tax period", "Financial year", "GSTIN", "Legal name", "Trade name", "ARN", "ARN date", "Source PDF"];
+      const metadataRows = returns.map(item => [
+        item.formType, `${item.month} ${item.year || ""}`.trim(),
+        financialYear(item).label.replace(/^FY /, ""),
+        item.gstin, item.legalName, item.tradeName, item.arn, item.arnDate, item.fileName
+      ]);
+      sheets.push({ name: "Return Summary", matrix: addPeriodBlankRows({ headers: metadataHeaders, rows: metadataRows }) });
+      sheets.push({ name: "Processing Log", matrix: buildLogMatrix(returns) });
+      const usedNames = new Set(["return summary", "processing log"]);
+      const allTables = getTableConfigs(returns);
+      // Both reconciliation sheets come immediately after the Processing Log sheet
+      const orderedTables = [
+        ...allTables.filter(table => RECONCILIATION_KEYS.includes(table.key)),
+        ...allTables.filter(table => !RECONCILIATION_KEYS.includes(table.key))
+      ];
+      for (const table of orderedTables) {
+        let name = String(table.sheet).replace(/[\\/?*\[\]:]/g, "-").slice(0, 31);
+        for (let n = 2; usedNames.has(name.toLowerCase()); n++) name = `${name.slice(0, 31 - String(n).length - 1)}~${n}`;
+        usedNames.add(name.toLowerCase());
+        sheets.push({ name, matrix: tableMatrix(table, returns) });
+      }
+
+      return workbookFromSheets(sheets);
+    }
+
+    function workbookFromSheets(sheets) {
+      const sheetFiles = sheets.map((sheet, index) => [
+        `xl/worksheets/sheet${index + 1}.xml`,
+        worksheetXml(sheet.matrix)
+      ]);
+      const workbookSheets = sheets.map((sheet, index) => `<sheet name="${escapeXml(sheet.name)}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`).join("");
+      const relationships = sheets.map((_, index) =>
+        `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`
+      ).join("");
+      const contentOverrides = sheets.map((_, index) =>
+        `<Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`
+      ).join("");
+      const files = [
+        ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${contentOverrides}</Types>`],
+        ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+        ["xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets>${workbookSheets}</sheets></workbook>`],
+        ["xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${relationships}<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+        ["xl/styles.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="6"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFFF99"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFC7CE"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFC6EFCE"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFEB9C"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="164" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyNumberFormat="1"/><xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1"/><xf numFmtId="0" fontId="0" fillId="4" borderId="0" xfId="0" applyFill="1"/><xf numFmtId="0" fontId="0" fillId="5" borderId="0" xfId="0" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`],
+        ...sheetFiles
+      ];
+      return makeZip(files);
+    }
+
+    function downloadWorkbook() {
+      if (!state.returns.length) return;
+      try {
+        const scope = downloadSelect.hidden ? ALL_GSTINS : (downloadSelect.value || ALL_GSTINS);
+        const selected = scope === ALL_GSTINS
+          ? state.returns
+          : state.returns.filter(item => (item.gstin || NO_GSTIN) === scope);
+        if (!selected.length) throw new Error("No returns found for the selected GSTIN");
+        const blob = buildWorkbook(selected);
+        const allGstins = [...new Set(state.returns.map(item => item.gstin).filter(Boolean))];
+        let suffix = "";
+        if (scope !== ALL_GSTINS) suffix = scope === NO_GSTIN ? "_GSTIN_not_detected" : `_${scope}`;
+        else if (allGstins.length === 1) suffix = `_${allGstins[0]}`;
+        else if (allGstins.length > 1) suffix = "_All_GSTINs";
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `GST_Returns_Monthly_Consolidation${suffix}.xlsx`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        setStatus("Excel workbook downloaded. Reconcile all figures with the filed returns before use.", "success");
+      } catch (error) {
+        setStatus(`Could not create the Excel workbook: ${error?.message || "unknown error"}`, "error");
+      }
+    }
+
+    function downloadLog() {
+      try {
+        const matrix = buildLogMatrix(state.returns);
+        if (!matrix.rows.length) return;
+        const blob = workbookFromSheets([{ name: "Processing Log", matrix }]);
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "GST_Processing_Log.xlsx";
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        setStatus("Processing log downloaded as an Excel file.", "success");
+      } catch (error) {
+        setStatus(`Could not create the log workbook: ${error?.message || "unknown error"}`, "error");
+      }
+    }
+
+    logExportButton.addEventListener("click", downloadLog);
+    fileInput.addEventListener("change", event => processFiles(event.target.files));
+    tableSelect.addEventListener("change", renderPreview);
+    previewGstinSelect.addEventListener("change", renderPreview);
+    exportButton.addEventListener("click", downloadWorkbook);
+    clearButton.addEventListener("click", () => {
+      state.returns = [];
+      state.failures = [];
+      state.failureDetails = [];
+      state.skipped = [];
+      fileInput.value = "";
+      renderFiles([]);
+      setStatus("Choose PDFs to begin.");
+      updateInterface();
+    });
+    dropZone.addEventListener("click", event => {
+      if (event.target.closest("label, input")) return;
+      fileInput.click();
+    });
+    dropZone.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        fileInput.click();
+      }
+    });
+    for (const eventName of ["dragenter", "dragover"]) {
+      dropZone.addEventListener(eventName, event => {
+        event.preventDefault();
+        dropZone.classList.add("dragging");
+      });
+    }
+    for (const eventName of ["dragleave", "drop"]) {
+      dropZone.addEventListener(eventName, event => {
+        event.preventDefault();
+        dropZone.classList.remove("dragging");
+      });
+    }
+    dropZone.addEventListener("drop", event => processFiles(event.dataTransfer.files));
+    for (const eventName of ["dragover", "drop"]) {
+      window.addEventListener(eventName, event => { if (!dropZone.contains(event.target)) event.preventDefault(); });
+    }
+  </script>
+</body>
+</html>
