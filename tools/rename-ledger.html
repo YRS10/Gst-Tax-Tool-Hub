@@ -1,0 +1,904 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rename Ledger | File Rename Studio</title>
+<style>
+  :root{
+    --paper: #EDE6D0;
+    --paper-dim: #E2D9BC;
+    --rule: #CBBD93;
+    --ink: #221E17;
+    --muted: #6E6552;
+    --green-deep: #16342C;
+    --green: #1F4B3F;
+    --green-light: #2F6B57;
+    --brass: #A9832E;
+    --brass-light: #C9A756;
+    --stamp: #A5372B;
+    --stamp-dark: #832A20;
+    --ok: #3A6B4C;
+    --radius: 4px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--green-deep);
+    background-image:
+      radial-gradient(ellipse at top, rgba(255,255,255,0.04), transparent 60%);
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    min-height:100vh;
+    padding: 28px 16px 60px;
+    display:flex;
+    justify-content:center;
+  }
+  .book{
+    width:100%;
+    max-width: 760px;
+  }
+  .cover{
+    background: var(--green);
+    border-radius: 8px 8px 0 0;
+    padding: 26px 30px 0;
+    position:relative;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset;
+  }
+  .cover-inner{
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(201,167,86,0.35);
+  }
+  h1{
+    font-family:'Spectral', Georgia, serif;
+    font-weight:700;
+    font-size: 32px;
+    color: #F3ECD6;
+    margin: 0 0 8px;
+    letter-spacing: 0.2px;
+  }
+  .sub{
+    color: #C9CFC4;
+    font-size: 13px;
+    line-height:1.6;
+    max-width: 54ch;
+    margin:0;
+  }
+  .tabs{
+    display:flex;
+    gap:6px;
+    margin-top: 22px;
+    padding-left: 2px;
+  }
+  .tab{
+    font-family:'Spectral', serif;
+    font-weight:600;
+    font-size: 14px;
+    background: var(--paper-dim);
+    color: var(--muted);
+    border:none;
+    padding: 10px 18px 9px;
+    border-radius: 6px 6px 0 0;
+    cursor:pointer;
+    position:relative;
+    top:2px;
+    transform: translateY(3px);
+    transition: transform .15s ease, background .15s ease, color .15s ease;
+  }
+  .tab:hover{ color: var(--ink); }
+  .tab.active{
+    background: var(--paper);
+    color: var(--ink);
+    transform: translateY(0);
+    top:0;
+  }
+  .tab .n{
+    display:inline-block;
+    min-width:16px;
+    height:16px;
+    line-height:16px;
+    font-size:10px;
+    background: var(--stamp);
+    color:#fff;
+    border-radius:50%;
+    text-align:center;
+    margin-left:6px;
+    transform: translateY(-1px);
+  }
+  .page{
+    background: var(--paper);
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 27px,
+      var(--rule) 28px
+    );
+    border-radius: 0 8px 8px 8px;
+    padding: 30px 30px 34px;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+    min-height: 420px;
+  }
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+  h2{
+    font-family:'Spectral', serif;
+    font-size: 18px;
+    font-weight:600;
+    margin: 0 0 6px;
+  }
+  p.hint{
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height:1.7;
+    margin: 0 0 18px;
+    max-width: 58ch;
+  }
+  .drop{
+    border: 1.5px dashed var(--brass);
+    border-radius: var(--radius);
+    padding: 30px 18px;
+    text-align:center;
+    color: var(--muted);
+    font-size: 13px;
+    cursor:pointer;
+    background: rgba(255,255,255,0.18);
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .drop:hover, .drop.drag{
+    background: rgba(255,255,255,0.4);
+    border-color: var(--stamp);
+  }
+  .drop strong{ color: var(--ink); font-weight:600; }
+  input[type=file]{ display:none; }
+  .btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    font-weight:500;
+    border-radius: var(--radius);
+    padding: 9px 15px;
+    cursor:pointer;
+    border: 1px solid var(--brass);
+    background: transparent;
+    color: var(--green-deep);
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .btn:hover{ background: rgba(169,131,46,0.15); }
+  .btn.primary{
+    background: var(--green);
+    border-color: var(--green);
+    color: #F3ECD6;
+  }
+  .btn.primary:hover{ background: var(--green-light); }
+  .btn.stamp{
+    background: var(--stamp);
+    border-color: var(--stamp);
+    color: #fff;
+  }
+  .btn.stamp:hover{ background: var(--stamp-dark); }
+  .btn:disabled{
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .btn.small{ padding:5px 10px; font-size:11px; }
+  .row-actions{ display:flex; gap:8px; flex-wrap:wrap; margin: 14px 0; }
+  .filelist{
+    list-style:none; margin: 14px 0 0; padding:0;
+    font-size: 12.5px;
+    max-height: 230px;
+    overflow-y:auto;
+  }
+  .filelist li{
+    display:flex; justify-content:space-between;
+    padding: 4px 0;
+    border-bottom: 1px dotted var(--rule);
+  }
+  .filelist li .tag{
+    color: var(--muted);
+    font-size: 10.5px;
+  }
+  .status-line{
+    font-size:12.5px; color: var(--muted); margin-top:10px;
+  }
+  .status-line.err{ color: var(--stamp-dark); }
+  table{ width:100%; border-collapse: collapse; margin-top: 8px; font-size: 12.5px; }
+  th{
+    text-align:left; font-weight:600; font-family:'Spectral',serif;
+    padding: 6px 8px; border-bottom: 1.5px solid var(--brass);
+    color: var(--green-deep);
+  }
+  td{ padding: 6px 8px; border-bottom: 1px dotted var(--rule); vertical-align:middle; }
+  td input{
+    width:100%;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    border: none;
+    border-bottom: 1px solid transparent;
+    background: transparent;
+    color: var(--ink);
+    padding: 3px 2px;
+  }
+  td input:focus{ outline:none; border-bottom-color: var(--brass); }
+  .rm{
+    border:none; background:none; cursor:pointer; color: var(--muted);
+    font-size: 14px; line-height:1;
+  }
+  .rm:hover{ color: var(--stamp); }
+  .pill{
+    display:inline-block; font-size:10.5px; padding: 2px 8px;
+    border-radius: 20px; font-weight:500;
+  }
+  .pill.rename{ background: rgba(58,107,76,0.18); color: var(--ok); }
+  .pill.nochange{ background: rgba(110,101,82,0.15); color: var(--muted); }
+  .pill.conflict{ background: rgba(165,55,43,0.15); color: var(--stamp-dark); }
+  .pill.notfound{ background: rgba(165,55,43,0.15); color: var(--stamp-dark); }
+  .pill.empty{ background: rgba(110,101,82,0.15); color: var(--muted); }
+  .summary{
+    display:flex; gap: 22px; margin: 16px 0 4px; flex-wrap:wrap;
+  }
+  .summary div{ font-size:12px; color:var(--muted); }
+  .summary b{ display:block; font-family:'Spectral',serif; font-size:22px; color:var(--ink); font-weight:600; }
+  .checkline{
+    display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); margin: 4px 0 16px;
+  }
+  .foot{
+    margin-top: 22px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule);
+    font-size: 11px;
+    color: var(--muted);
+    line-height:1.7;
+  }
+  .empty-state{
+    color: var(--muted); font-size:12.5px; padding: 20px 0;
+  }
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background: var(--rule); border-radius:4px; }
+  @media (max-width:520px){
+    h1{ font-size:26px; }
+    .cover{ padding: 20px 18px 0; }
+    .page{ padding: 22px 18px 28px; }
+    .tabs{ gap:4px; }
+    .tab{ padding: 8px 11px 8px; font-size:12.5px; }
+    .summary{ gap:14px; }
+  }
+  :root{
+    font-family:Inter,"Segoe UI",Arial,sans-serif;
+    color:#182230;
+    background:#f4f6f9;
+    font-synthesis:none;
+    text-rendering:optimizeLegibility;
+    --paper:#fff;
+    --paper-dim:#f8faf8;
+    --rule:#edf0ee;
+    --ink:#182230;
+    --muted:#68766d;
+    --green-deep:#14251f;
+    --green:#1d6b52;
+    --green-light:#15543f;
+    --brass:#c9d9ce;
+    --brass-light:#dce9e2;
+    --stamp:#873b2c;
+    --stamp-dark:#873b2c;
+    --ok:#366148;
+  }
+  body{background:#f4f6f9;background-image:none;color:#182230;font-family:Inter,"Segoe UI",Arial,sans-serif;min-height:100vh;padding:0;display:block}
+  .book{width:auto;max-width:1180px;margin:0 auto;padding:34px 28px 52px}
+  .topline{display:flex;align-items:center;gap:12px;margin:0 0 30px;color:#576577;font-size:13px;font-weight:650;letter-spacing:.04em;text-transform:uppercase}
+  .mark{display:grid;place-items:center;width:35px;height:35px;border-radius:10px;background:#1d6b52;color:#fff;font-size:12px;font-weight:800;letter-spacing:0}
+  .cover{background:transparent;border-radius:0;padding:0;box-shadow:none}
+  .cover-inner{padding:0;border:0}
+  h1{font-family:Inter,"Segoe UI",Arial,sans-serif;font-size:clamp(29px,4vw,42px);letter-spacing:-.045em;line-height:1.08;margin:0;color:#14251f}
+  .sub{max-width:730px;color:#617064;line-height:1.65;margin:13px 0 22px;font-size:15px}
+  .notice{display:flex;gap:12px;align-items:flex-start;border:1px solid #dce9e2;background:#f0f7f3;border-radius:12px;padding:14px 16px;color:#345c48;font-size:13px;line-height:1.5;margin-bottom:22px}
+  .notice strong{color:#1e4834}
+  .tabs{display:flex;gap:8px;margin:0 0 12px;padding:0;flex-wrap:wrap}
+  .tab{font-family:inherit;font-size:13px;font-weight:650;background:#fff;color:#526258;border:1px solid #dfe7e2;border-radius:9px;padding:10px 16px;top:0;transform:none;transition:background .15s,border-color .15s,color .15s}
+  .tab:hover{color:#1d6b52;background:#f5faf7}
+  .tab.active{background:#1d6b52;border-color:#1d6b52;color:#fff;transform:none;top:0}
+  .page{background:transparent;background-image:none;border-radius:0;padding:0;box-shadow:none;min-height:0}
+  .panel{display:none;background:#fff;border:1px solid #e3e8e5;border-radius:16px;padding:24px;box-shadow:0 8px 26px #16332708}
+  .panel.active{display:block}
+  h2{font-family:inherit;font-size:19px;letter-spacing:-.02em;color:#182230;margin:0 0 6px}
+  p.hint{color:#617064;font-size:13px;line-height:1.6;margin:0 0 18px;max-width:760px}
+  .drop{min-height:176px;border:1.5px dashed #b9ccc1;border-radius:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:22px;background:#fbfdfb;color:#617064;transition:.18s}
+  .drop:hover,.drop.drag{border-color:#1d6b52;background:#f0f7f3}
+  .drop strong{color:#253a30}
+  .btn{display:inline-flex;align-items:center;font-family:inherit;font-size:13px;font-weight:700;border:1px solid #dce9e2;border-radius:9px;padding:11px 16px;background:#fff;color:#1d6b52;transition:background .15s,transform .15s;cursor:pointer}
+  .btn:hover{background:#f0f7f3}
+  .btn.primary,.btn.stamp{background:#1d6b52;border-color:#1d6b52;color:#fff}
+  .btn.primary:hover,.btn.stamp:hover{background:#15543f}
+  .btn:disabled{background:#aab8b0;cursor:not-allowed;opacity:1}
+  .row-actions{gap:10px;margin:14px 0}
+  .filelist{display:grid;gap:8px;max-height:300px}
+  .filelist li{align-items:center;border:1px solid #e9eeeb;border-radius:9px;padding:10px 12px;color:#38483e}
+  .filelist li .tag{color:#78847c;font-size:12px}
+  .status-line{color:#617064;font-size:13px;line-height:1.5}
+  .status-line.err{color:#873b2c}
+  .checkline{color:#617064}
+  .checkline input{accent-color:#1d6b52}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
+  th,td{text-align:left;padding:11px 13px;border-bottom:1px solid #edf0ee;vertical-align:top}
+  th{background:#f8faf8;color:#67756b;font-weight:700;font-family:inherit;border-bottom:1px solid #edf0ee}
+  td{color:#34443a}
+  tbody tr:last-child td{border-bottom:0}
+  td input{font-family:inherit;font-size:13px;color:#34443a;border-bottom:1px solid transparent;padding:6px 4px}
+  td input:focus{border-bottom-color:#1d6b52}
+  .rm{color:#78847c}
+  .rm:hover{color:#873b2c}
+  .summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}
+  .summary div{background:#fff;border:1px solid #e3e8e5;border-radius:12px;padding:16px;color:#78847c;font-size:12px}
+  .summary b{font-family:inherit;font-size:24px;color:#1b3529;font-weight:750;margin-bottom:6px}
+  .pill{font-size:11px;padding:4px 8px;font-weight:700}
+  .pill.rename{background:#edf4ef;color:#366148}
+  .pill.nochange,.pill.empty{background:#f1f2f1;color:#778078}
+  .pill.conflict,.pill.notfound{background:#fff2ef;color:#873b2c}
+  .empty-state{color:#78847c;font-size:13px;padding:18px 0}
+  .foot{margin-top:22px;padding-top:16px;border-top:1px solid #e3e8e5;color:#7b867f;font-size:12px;line-height:1.6;text-align:center}
+  ::-webkit-scrollbar-thumb{background:#cbd8d0}
+  @media(max-width:760px){.book{padding:23px 16px 38px}.panel{padding:18px 16px}.summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:520px){.book{padding:22px 14px 32px}.tabs{gap:6px}.tab{padding:9px 11px;font-size:12px}.summary{gap:8px}.summary div{padding:12px}.summary b{font-size:21px}#panel-mapping,#panel-preview{overflow-x:auto}}
+</style>
+</head>
+<body>
+<main class="book">
+  <div class="topline"><span class="mark">FR</span> File Rename Studio</div>
+  <div class="cover">
+    <div class="cover-inner">
+      <h1>Rename files with Automation.</h1>
+      <p class="sub">Add a zip of your folder, pair each current name with its new one, review the changes, and download the renamed files—all in one clear workflow.</p>
+    </div>
+    <div class="notice"><span aria-hidden="true">●</span><div><strong>Private and local.</strong> Your files are processed in this browser and are never uploaded. The original zip stays unchanged.</div></div>
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="files">Files</button>
+      <button class="tab" data-tab="template">Template</button>
+      <button class="tab" data-tab="mapping">Mapping</button>
+      <button class="tab" data-tab="preview">Preview</button>
+      <button class="tab" data-tab="apply">Rename</button>
+    </div>
+  </div>
+
+  <div class="page">
+
+    <!-- FILES -->
+    <div class="panel active" id="panel-files">
+      <h2>Add your files</h2>
+      <p class="hint">Compress the folder you want to rename into a single .zip, then add it here. Only the items sitting directly inside that folder can be renamed — items nested further down keep their names, same as the original script.</p>
+      <div class="drop" id="dropzone">
+        <div id="dropText"><strong>Click to choose a .zip</strong>, or drag one in</div>
+      </div>
+      <input type="file" id="zipInput" accept=".zip" />
+      <div class="status-line" id="filesStatus"></div>
+      <ul class="filelist" id="filesList"></ul>
+    </div>
+
+    <!-- TEMPLATE -->
+    <div class="panel" id="panel-template">
+      <h2>Download a starter list</h2>
+      <p class="hint">Get the current names as an .xlsx file with column A headed "Old Name" — one row per item found directly inside your folder. Fill in a New Name column alongside it, then upload it back on the Mapping tab.</p>
+      <div class="row-actions">
+        <button class="btn primary" id="downloadTemplateBtn">Download names as .xlsx</button>
+      </div>
+      <div class="status-line" id="templateStatus"></div>
+      <ul class="filelist" id="templateList"></ul>
+    </div>
+
+    <!-- MAPPING -->
+    <div class="panel" id="panel-mapping">
+      <h2>Match old names to new ones</h2>
+      <p class="hint">Fill this table by hand, pull the current names in automatically, or upload a spreadsheet with the current name in the first column and the new name in the second.</p>
+      <div class="row-actions">
+        <button class="btn" id="autofillBtn">Fill in current names</button>
+        <label class="btn" for="mapFileInput">Upload spreadsheet</label>
+        <input type="file" id="mapFileInput" accept=".xlsx,.xls,.csv" />
+        <button class="btn" id="addRowBtn">Add row</button>
+        <button class="btn" id="downloadMapBtn">Download this table</button>
+      </div>
+      <div class="checkline">
+        <input type="checkbox" id="ignoreCase" checked />
+        <label for="ignoreCase">Match names without worrying about capitalization</label>
+      </div>
+      <table id="mapTable">
+        <thead><tr><th style="width:44%">Current name</th><th style="width:44%">New name</th><th></th></tr></thead>
+        <tbody id="mapBody"></tbody>
+      </table>
+      <div class="empty-state" id="mapEmpty">No rows yet — add one, or fill in the current names once you've added a zip.</div>
+    </div>
+
+    <!-- PREVIEW -->
+    <div class="panel" id="panel-preview">
+      <h2>Check before anything changes</h2>
+      <p class="hint">This lays out exactly what will happen — nothing is renamed until you move to the next tab and confirm.</p>
+      <div class="row-actions">
+        <button class="btn primary" id="previewBtn">Preview renames</button>
+      </div>
+      <div class="summary" id="previewSummary"></div>
+      <table id="previewTable" style="display:none">
+        <thead><tr><th style="width:38%">Current name</th><th style="width:38%">New name</th><th>What happens</th></tr></thead>
+        <tbody id="previewBody"></tbody>
+      </table>
+      <div class="empty-state" id="previewEmpty">Add a zip and a mapping first, then preview.</div>
+    </div>
+
+    <!-- APPLY -->
+    <div class="panel" id="panel-apply">
+      <h2>Rename and download</h2>
+      <p class="hint">This builds a new zip with the renamed items and downloads it. Your original file never leaves the browser.</p>
+      <div class="row-actions">
+        <button class="btn stamp" id="applyBtn" disabled>Download renamed zip</button>
+      </div>
+      <div class="status-line" id="applyStatus"></div>
+    </div>
+
+    <div class="foot">
+      Everything runs locally in your browser using JavaScript — no files are uploaded to a server. Empty subfolders with nothing inside them may be dropped from the result, the same limitation as the original desktop script.
+    </div>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+  const state = {
+    zip: null,
+    zipName: '',
+    base: '',
+    entries: [],   // {name, isDir}
+    mapping: [],   // {old, new}
+    preview: []    // {old, new, status}
+  };
+
+  // ---------- tabs ----------
+  document.getElementById('tabs').addEventListener('click', e=>{
+    const btn = e.target.closest('.tab');
+    if(!btn) return;
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+  });
+
+  // ---------- files tab ----------
+  const dropzone = document.getElementById('dropzone');
+  const zipInput = document.getElementById('zipInput');
+  dropzone.addEventListener('click', ()=> zipInput.click());
+  dropzone.addEventListener('dragover', e=>{ e.preventDefault(); dropzone.classList.add('drag'); });
+  dropzone.addEventListener('dragleave', ()=> dropzone.classList.remove('drag'));
+  dropzone.addEventListener('drop', e=>{
+    e.preventDefault(); dropzone.classList.remove('drag');
+    if(e.dataTransfer.files.length) loadZip(e.dataTransfer.files[0]);
+  });
+  zipInput.addEventListener('change', e=>{
+    if(e.target.files.length) loadZip(e.target.files[0]);
+  });
+
+  async function loadZip(file){
+    const statusEl = document.getElementById('filesStatus');
+    if(!file.name.toLowerCase().endsWith('.zip')){
+      statusEl.textContent = 'That file is not a .zip — please compress your folder first.';
+      statusEl.classList.add('err');
+      return;
+    }
+    statusEl.classList.remove('err');
+    statusEl.textContent = 'Reading ' + file.name + ' …';
+    try{
+      const buf = await file.arrayBuffer();
+      const zip = await JSZip.loadAsync(buf);
+      state.zip = zip;
+      state.zipName = file.name.replace(/\.zip$/i, '');
+      const base = computeBase(zip);
+      state.base = base;
+      state.entries = computeEntries(zip, base);
+      state.preview = [];
+      renderPreview();
+      document.getElementById('dropText').innerHTML = '<strong>' + file.name + '</strong> added — click to replace';
+      statusEl.textContent = state.entries.length + ' item(s) found directly inside the folder.'
+        + (state.entries.length === 0 ? ' If that looks wrong, make sure the zip actually contains your folder\'s contents.' : '');
+      renderFilesList();
+    }catch(err){
+      statusEl.textContent = 'Could not read that zip: ' + err.message;
+      statusEl.classList.add('err');
+    }
+  }
+
+  function computeBase(zip){
+    const paths = Object.keys(zip.files).filter(p=>p!=='');
+    if(!paths.length) return '';
+    const tops = new Set(paths.map(p=>p.split('/')[0]));
+    if(tops.size===1){
+      const only = [...tops][0];
+      const prefix = only + '/';
+      // require at least one path that is genuinely inside the wrapper (not just the
+      // wrapper's own directory entry) — otherwise a lone empty top folder gets
+      // mistaken for a wrapper and its contents (none) get treated as "the folder"
+      const isWrapper = paths.some(p=> p !== prefix && p.startsWith(prefix));
+      if(isWrapper) return prefix;
+    }
+    return '';
+  }
+
+  function computeEntries(zip, base){
+    const map = new Map();
+    for(const p of Object.keys(zip.files)){
+      if(p===base || !p.startsWith(base)) continue;
+      const rel = p.slice(base.length);
+      if(!rel) continue;
+      const segment = rel.split('/')[0];
+      if(!segment) continue;
+      const nestedFurther = rel !== segment && rel !== segment + '/';
+      const isDir = nestedFurther || zip.files[p].dir;
+      if(!map.has(segment)) map.set(segment, isDir);
+      else if(isDir) map.set(segment, true);
+    }
+    return [...map.entries()]
+      .map(([name,isDir])=>({name,isDir}))
+      .sort((a,b)=> a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+  }
+
+  function renderFilesList(){
+    const ul = document.getElementById('filesList');
+    ul.innerHTML = '';
+    state.entries.forEach(e=>{
+      const li = document.createElement('li');
+      li.innerHTML = '<span>'+escapeHtml(e.name)+'</span><span class="tag">'+(e.isDir?'folder':'file')+'</span>';
+      ul.appendChild(li);
+    });
+    renderTemplateList();
+  }
+
+  // ---------- template tab ----------
+  function renderTemplateList(){
+    const ul = document.getElementById('templateList');
+    const status = document.getElementById('templateStatus');
+    ul.innerHTML = '';
+    status.classList.remove('err');
+    if(!state.entries.length){
+      status.textContent = 'Add a zip on the Files tab first.';
+      return;
+    }
+    status.textContent = state.entries.length + ' name(s) ready to download.';
+    state.entries.forEach(e=>{
+      const li = document.createElement('li');
+      li.innerHTML = '<span>'+escapeHtml(e.name)+'</span><span class="tag">'+(e.isDir?'folder':'file')+'</span>';
+      ul.appendChild(li);
+    });
+  }
+
+  document.getElementById('downloadTemplateBtn').addEventListener('click', ()=>{
+    const status = document.getElementById('templateStatus');
+    if(!state.entries.length){
+      status.textContent = 'Add a zip on the Files tab first.';
+      status.classList.add('err');
+      return;
+    }
+    const aoa = [['Old Name']].concat(state.entries.map(e=>[e.name]));
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{wch: 40}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Old Names');
+    const out = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+    const blob = new Blob([out], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    downloadBlob(blob, (state.zipName || 'names') + '_old_names.xlsx');
+    status.classList.remove('err');
+    status.textContent = 'Downloaded — fill in a New Name column and upload it on the Mapping tab when ready.';
+  });
+
+  // ---------- mapping tab ----------
+  function invalidatePreview(){
+    if(state.preview.length){
+      state.preview = [];
+      renderPreview();
+    }
+  }
+
+  function renderMapTable(){
+    const body = document.getElementById('mapBody');
+    body.innerHTML = '';
+    document.getElementById('mapEmpty').style.display = state.mapping.length ? 'none' : 'block';
+    state.mapping.forEach((row, i)=>{
+      const tr = document.createElement('tr');
+      const tdOld = document.createElement('td');
+      const tdNew = document.createElement('td');
+      const tdRm = document.createElement('td');
+      const oldInput = document.createElement('input');
+      oldInput.value = row.old;
+      oldInput.placeholder = 'current name';
+      oldInput.addEventListener('input', e=>{ state.mapping[i].old = e.target.value; invalidatePreview(); });
+      const newInput = document.createElement('input');
+      newInput.value = row.new;
+      newInput.placeholder = 'new name';
+      newInput.addEventListener('input', e=>{ state.mapping[i].new = e.target.value; invalidatePreview(); });
+      const rm = document.createElement('button');
+      rm.className='rm'; rm.textContent='×'; rm.title='Remove row';
+      rm.addEventListener('click', ()=>{ state.mapping.splice(i,1); invalidatePreview(); renderMapTable(); });
+      tdOld.appendChild(oldInput); tdNew.appendChild(newInput); tdRm.appendChild(rm);
+      tr.appendChild(tdOld); tr.appendChild(tdNew); tr.appendChild(tdRm);
+      body.appendChild(tr);
+    });
+  }
+
+  document.getElementById('addRowBtn').addEventListener('click', ()=>{
+    state.mapping.push({old:'', new:''});
+    invalidatePreview();
+    renderMapTable();
+  });
+
+  document.getElementById('autofillBtn').addEventListener('click', ()=>{
+    if(!state.entries.length){
+      alert('Add a zip on the Files tab first.');
+      return;
+    }
+    const existing = new Set(state.mapping.map(r=>r.old.trim().toLowerCase()));
+    state.entries.forEach(e=>{
+      if(!existing.has(e.name.toLowerCase())) state.mapping.push({old:e.name, new:''});
+    });
+    invalidatePreview();
+    renderMapTable();
+  });
+
+  document.getElementById('mapFileInput').addEventListener('change', async e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    try{
+      const rows = await parseMappingFile(file);
+      const existing = new Set(state.mapping.map(r=>r.old.trim().toLowerCase()));
+      rows.forEach(r=>{
+        if(r.old && !existing.has(r.old.toLowerCase())){
+          state.mapping.push(r);
+          existing.add(r.old.toLowerCase());
+        }
+      });
+      invalidatePreview();
+      renderMapTable();
+    }catch(err){
+      alert('Could not read that spreadsheet: ' + err.message);
+    }
+    e.target.value = '';
+  });
+
+  async function parseMappingFile(file){
+    const ext = file.name.split('.').pop().toLowerCase();
+    let workbook;
+    if(ext==='csv'){
+      const text = await file.text();
+      workbook = XLSX.read(text, {type:'string'});
+    }else{
+      const buf = await file.arrayBuffer();
+      workbook = XLSX.read(buf, {type:'array'});
+    }
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
+    if(!rows.length) return [];
+    return rows.slice(1)
+      .map(r=>({old:String(r[0]??'').trim(), new:String(r[1]??'').trim()}))
+      .filter(r=>r.old);
+  }
+
+  document.getElementById('downloadMapBtn').addEventListener('click', ()=>{
+    let csv = 'Old Name,New Name\n';
+    state.mapping.forEach(r=>{
+      csv += '"'+ (r.old||'').replace(/"/g,'""') +'","'+ (r.new||'').replace(/"/g,'""') +'"\n';
+    });
+    const blob = new Blob([csv], {type:'text/csv'});
+    downloadBlob(blob, 'rename_mapping.csv');
+  });
+
+  // ---------- preview tab ----------
+  document.getElementById('previewBtn').addEventListener('click', runPreview);
+
+  function runPreview(){
+    if(!state.zip){ alert('Add a zip on the Files tab first.'); return; }
+    const ignoreCase = document.getElementById('ignoreCase').checked;
+    const norm = s => ignoreCase ? s.toLowerCase() : s;
+
+    const mapByKey = new Map();
+    state.mapping.forEach(r=>{
+      if(r.old && r.old.trim()) mapByKey.set(norm(r.old.trim()), r.new.trim());
+    });
+
+    const finalNameCount = new Map();
+    const perEntry = [];
+    state.entries.forEach(e=>{
+      const key = norm(e.name);
+      const matched = mapByKey.has(key);
+      const newName = matched ? mapByKey.get(key) : null;
+      const final = (matched && newName) ? newName : e.name;
+      finalNameCount.set(final, (finalNameCount.get(final)||0)+1);
+      perEntry.push({old:e.name, new:newName, matched, final});
+    });
+
+    const results = [];
+    perEntry.forEach(info=>{
+      let status;
+      if(!info.matched) status = null; // not in mapping table, leave untouched, don't list
+      else if(!info.new) status = 'empty';
+      else if(info.new === info.old) status = 'nochange';
+      else if(finalNameCount.get(info.final) > 1) status = 'conflict';
+      else status = 'rename';
+      if(status) results.push({old:info.old, new:info.new||'', status});
+    });
+
+    const foundKeys = new Set(state.entries.map(e=>norm(e.name)));
+    state.mapping.forEach(r=>{
+      if(!r.old || !r.old.trim()) return;
+      if(!foundKeys.has(norm(r.old.trim()))){
+        results.push({old:r.old, new:r.new, status:'notfound'});
+      }
+    });
+
+    state.preview = results;
+    state.previewIgnoreCase = ignoreCase;
+    renderPreview();
+  }
+
+  function renderPreview(){
+    const body = document.getElementById('previewBody');
+    const table = document.getElementById('previewTable');
+    const empty = document.getElementById('previewEmpty');
+    const summary = document.getElementById('previewSummary');
+    body.innerHTML = '';
+
+    if(!state.preview.length){
+      table.style.display='none';
+      empty.style.display='block';
+      empty.textContent = 'Not previewed yet — click "Preview renames" above. (Changing the zip or the mapping clears an old preview, so this stays accurate.)';
+      summary.innerHTML = '';
+      updateApplyButton();
+      return;
+    }
+    empty.style.display='none';
+    table.style.display='table';
+
+    const labels = {
+      rename:['Will rename','rename'],
+      nochange:['No change needed','nochange'],
+      conflict:['Conflict — two items would share this name','conflict'],
+      notfound:['Not found in the zip','notfound'],
+      empty:['New name is blank','empty']
+    };
+
+    state.preview.forEach(r=>{
+      const [text, cls] = labels[r.status];
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>'+escapeHtml(r.old)+'</td><td>'+escapeHtml(r.new)+'</td>'+
+        '<td><span class="pill '+cls+'">'+text+'</span></td>';
+      body.appendChild(tr);
+    });
+
+    const willRename = state.preview.filter(r=>r.status==='rename').length;
+    const conflicts = state.preview.filter(r=>r.status==='conflict').length;
+    const notfound = state.preview.filter(r=>r.status==='notfound').length;
+    summary.innerHTML =
+      '<div><b>'+willRename+'</b>will rename</div>'+
+      '<div><b>'+conflicts+'</b>conflicts</div>'+
+      '<div><b>'+notfound+'</b>not found in zip</div>';
+
+    updateApplyButton();
+  }
+
+  function updateApplyButton(){
+    const willRename = state.preview.filter(r=>r.status==='rename').length;
+    document.getElementById('applyBtn').disabled = !(state.zip && willRename > 0);
+  }
+
+  // ---------- apply tab ----------
+  document.getElementById('applyBtn').addEventListener('click', applyRenames);
+
+  async function applyRenames(){
+    const statusEl = document.getElementById('applyStatus');
+    const btn = document.getElementById('applyBtn');
+    btn.disabled = true;
+    statusEl.classList.remove('err');
+    statusEl.textContent = 'Building your renamed zip …';
+
+    try{
+      const ignoreCase = state.previewIgnoreCase;
+      const norm = s => ignoreCase ? s.toLowerCase() : s;
+      const renameMap = new Map();
+      state.preview.filter(r=>r.status==='rename').forEach(r=>{
+        const entry = state.entries.find(e=> norm(e.name) === norm(r.old));
+        if(entry) renameMap.set(entry.name, r.new);
+      });
+
+      const newZip = new JSZip();
+      const base = state.base;
+      const paths = Object.keys(state.zip.files);
+
+      function renamedPath(p){
+        if(!p.startsWith(base)) return p;
+        const rel = p.slice(base.length);
+        const segment = rel.split('/')[0];
+        if(renameMap.has(segment)){
+          return base + renameMap.get(segment) + rel.slice(segment.length);
+        }
+        return p;
+      }
+
+      let filesAdded = 0;
+      for(const p of paths){
+        const obj = state.zip.files[p];
+        if(obj.dir) continue;
+        const data = await obj.async('uint8array');
+        newZip.file(renamedPath(p), data);
+        filesAdded++;
+      }
+
+      // Folders don't carry their own bytes — JSZip only recreates a folder
+      // implicitly when a file is added underneath it. A folder with nothing
+      // directly or indirectly inside it (including a folder being renamed
+      // that is itself empty) needs to be added explicitly, or it silently
+      // disappears from the output.
+      let foldersAdded = 0;
+      for(const p of paths){
+        const obj = state.zip.files[p];
+        if(!obj.dir) continue;
+        const hasDescendant = paths.some(q => q !== p && q.startsWith(p));
+        if(hasDescendant) continue;
+        const newPath = renamedPath(p);
+        newZip.folder(newPath.replace(/\/$/, ''));
+        foldersAdded++;
+      }
+
+      if(filesAdded === 0 && foldersAdded === 0){
+        statusEl.textContent = 'Nothing to include — the zip you added appears to have no items. Nothing was downloaded.';
+        statusEl.classList.add('err');
+        updateApplyButton();
+        return;
+      }
+
+      const blob = await newZip.generateAsync({type:'blob'});
+      downloadBlob(blob, state.zipName + '-renamed.zip');
+      const count = renameMap.size;
+      statusEl.textContent = 'Done — renamed ' + count + ' item(s), ' + filesAdded + ' file(s) included. Your download should start automatically.';
+    }catch(err){
+      statusEl.textContent = 'Something went wrong: ' + err.message;
+      statusEl.classList.add('err');
+    }finally{
+      updateApplyButton();
+    }
+  }
+
+  // ---------- helpers ----------
+  function downloadBlob(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  renderMapTable();
+  renderTemplateList();
+})();
+</script>
+<!-- ytb-footer:start -->
+<style>
+.ytb-foot{all:initial;display:block;box-sizing:border-box;clear:both;width:100%;margin:36px 0 0;background:#eef3f0;border-top:1px solid #c4d3cb;color:#13232f;font-family:"Public Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;line-height:1.6;text-align:left}
+.ytb-foot *{box-sizing:border-box;font-family:inherit}
+.ytb-foot .ytb-wrap{max-width:1040px;margin:0 auto;padding:34px 22px 10px;display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.ytb-foot h3{margin:0 0 6px;padding-left:10px;border-left:4px solid #b3261e;font-size:16px;font-weight:600;color:#13232f;line-height:1.4}
+.ytb-foot p{margin:0;color:#51656f;font-size:14.5px}
+.ytb-foot .ytb-note{max-width:1040px;margin:0 auto;padding:18px 22px 30px;font-size:13px;color:#51656f;border-top:1px solid #c4d3cb;margin-top:26px}
+.ytb-foot .ytb-note p{font-size:13px;margin:0 0 6px}
+.ytb-foot .ytb-note strong{color:#13232f}
+.ytb-foot a{color:#1d6b4a;font-weight:600}
+@media(max-width:760px){.ytb-foot .ytb-wrap{grid-template-columns:1fr;gap:20px}}
+</style>
+<footer class="ytb-foot">
+  <div class="ytb-wrap">
+    <div><h3>Free to use</h3><p>No sign-up and no subscription. Open it and start working.</p></div>
+    <div><h3>Your files stay with you</h3><p>Everything runs in your browser on your device. Files you select are not uploaded to any server.</p></div>
+    <div><h3>Made for daily work</h3><p>Designed around the month-end and return-filing jobs accountants repeat all the time.</p></div>
+  </div>
+  <div class="ytb-note">
+    <p>Designed and developed by <strong>Yatin Bansal</strong>.</p>
+    <p>For feedback, write to <a href="mailto:write2me.yrs@gmail.com">write2me.yrs@gmail.com</a>.</p>
+    <p>Always verify results before filing returns or relying on them for compliance. These tools support your work and do not replace professional judgement.</p>
+  </div>
+</footer>
+<!-- ytb-footer:end -->
+</body>
+</html>
